@@ -125,5 +125,33 @@ export function initZoomPanListeners(canvas, currentImage, drawCanvas) {
     });
 }
 
+export function calculateGridSizeLimits(width, height, viewMode, config) {
+    // Calculate the smaller dimension to use as reference for min size
+    const smallerDimension = Math.min(width, height);
+    const largerDimension = Math.max(width, height);
+    
+    // Calculate min and max grid sizes
+    const minGridSize = Math.max(1, Math.floor(smallerDimension / 50)); // 1/50th of the smaller dimension
+    const maxGridSize = largerDimension; // 100% of the longest side
+    const midGridSize = Math.floor((minGridSize + maxGridSize) / 2);
+    
+    // In canvas mode, convert to cm/in
+    if (viewMode === 'canvas') {
+        const pixelsPerCm = width / config.canvasWidthCm;
+        return {
+            min: (minGridSize / pixelsPerCm).toFixed(1),
+            max: (maxGridSize / pixelsPerCm).toFixed(1),
+            mid: (midGridSize / pixelsPerCm).toFixed(1)
+        };
+    }
+    
+    // In full image mode, use pixels
+    return {
+        min: minGridSize,
+        max: maxGridSize,
+        mid: midGridSize
+    };
+}
+
 // Export state for use in other modules
 export { _zoom, _panX, _panY }; 
