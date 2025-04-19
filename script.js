@@ -388,6 +388,7 @@ imageInput.addEventListener('change', (e) => {
                 
                 // Set default grid style when loading new image
                 setDefaultGridStyle(config.viewMode);
+                drawCanvas();
                 
                 // Update grid size limits and set default grid size
                 updateGridSizeLimits();

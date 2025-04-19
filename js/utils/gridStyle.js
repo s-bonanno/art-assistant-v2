@@ -27,16 +27,22 @@ export function updateColorSwatchSelection() {
 
 // Set initial grid style values
 export function setDefaultGridStyle(viewMode) {
-    // Set line weight based on mode
-    gridConfig.lineWeight = viewMode === 'full' ? 3 : 1;
+    if (viewMode === 'full') {
+        gridConfig.color = '#ffffff';
+        gridConfig.opacity = 1;
+        gridConfig.lineWeight = 1;
+    } else {
+        gridConfig.color = '#ffffff';
+        gridConfig.opacity = 0.7;
+        gridConfig.lineWeight = 0.5;
+    }
     
     // Update UI elements
     gridLineWeight.value = gridConfig.lineWeight;
     gridLineWeightValue.textContent = `${gridConfig.lineWeight}px`;
     gridOpacity.value = gridConfig.opacity;
-    gridOpacityValue.textContent = '100%';
+    gridOpacityValue.textContent = `${Math.round(gridConfig.opacity * 100)}%`;
     
-    // Update color swatch selection
     updateColorSwatchSelection();
 }
 
