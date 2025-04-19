@@ -27,11 +27,9 @@ const EXPORT_SIZE = 2400; // Size of the exported image
 import { convertToUnit, convertFromUnit } from './js/utils/unitConversion.js';
 import { gridConfig, updateColorSwatchSelection, setDefaultGridStyle, initGridStyleListeners } from './js/utils/gridStyle.js';
 import { filters, filterCache, applyFilters, initFilterListeners } from './js/utils/filters.js';
+import { getZoom, setZoom, getPanX, setPanX, getPanY, setPanY, resetZoomAndPan, zoomTo100, initZoomPanListeners } from './js/utils/zoomPan.js';
 
 let currentImage = null;
-let zoom = 1;
-let panX = 0;
-let panY = 0;
 let isDragging = false;
 let lastMouseX = 0;
 let lastMouseY = 0;
@@ -201,34 +199,17 @@ initGridStyleListeners(drawCanvas);
 // Initialize filter listeners
 initFilterListeners(drawCanvas);
 
+// Initialize zoom and pan listeners
+initZoomPanListeners(canvas, currentImage, drawCanvas);
+
 // Add fit to canvas functionality
 function fitToCanvas() {
     if (config.viewMode !== 'canvas' || !currentImage) return;
     
     // Reset zoom and pan
-    zoom = 1;
-    panX = 0;
-    panY = 0;
-    
-    // Redraw canvas
-    drawCanvas();
-}
-
-// Add 100% zoom functionality
-function zoomTo100() {
-    if (!currentImage) return;
-    
-    // Set zoom to 1 (100%)
-    zoom = 1;
-    
-    // Center the image
-    const container = document.querySelector('.relative.w-full');
-    const containerWidth = container.clientWidth;
-    const containerHeight = container.clientHeight;
-    
-    // Calculate center position
-    panX = (containerWidth - currentImage.naturalWidth) / 2;
-    panY = (containerHeight - currentImage.naturalHeight) / 2;
+    setZoom(1);
+    setPanX(0);
+    setPanY(0);
     
     // Redraw canvas
     drawCanvas();
@@ -257,6 +238,7 @@ viewModeToggle.addEventListener('change', () => {
         if (currentImage) {
             setDefaultGridSize();
             fitToScreen();
+            drawCanvas();
         }
     } else {
         // In canvas mode, use cm/in
@@ -272,6 +254,7 @@ viewModeToggle.addEventListener('change', () => {
         if (currentImage) {
             // Reset zoom and pan when switching to canvas mode
             fitToCanvas();
+            drawCanvas();
         }
     }
     
@@ -299,11 +282,11 @@ function fitToScreen() {
     );
     
     // Update zoom level
-    zoom = scale;
+    setZoom(scale);
     
     // Reset pan position
-    panX = 0;
-    panY = 0;
+    setPanX(0);
+    setPanY(0);
     
     // Redraw canvas
     drawCanvas();
@@ -346,9 +329,9 @@ imageInput.addEventListener('change', (e) => {
             img.onload = () => {
                 currentImage = img;
                 // Reset transform when loading new image
-                zoom = 1;
-                panX = 0;
-                panY = 0;
+                setZoom(1);
+                setPanX(0);
+                setPanY(0);
                 config.imageOffsetXPercent = 0;
                 config.imageOffsetYPercent = 0;
                 filterCache.needsUpdate = true;
@@ -450,8 +433,7 @@ canvas.addEventListener('wheel', (e) => {
     if (!currentImage) return;
 
     const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-    zoom *= zoomFactor;
-    zoom = Math.min(Math.max(0.1, zoom), 10);
+    setZoom(Math.min(Math.max(0.1, getZoom() * zoomFactor), 10));
     
     drawCanvas();
 });
@@ -466,7 +448,7 @@ canvas.addEventListener('touchstart', (e) => {
             e.touches[0].clientX - e.touches[1].clientX,
             e.touches[0].clientY - e.touches[1].clientY
         );
-        initialZoom = zoom;
+        initialZoom = getZoom();
     }
 });
 
@@ -479,7 +461,7 @@ canvas.addEventListener('touchmove', (e) => {
         );
         
         const scale = currentDistance / initialDistance;
-        zoom = Math.min(Math.max(0.1, initialZoom * scale), 10);
+        setZoom(Math.min(Math.max(0.1, initialZoom * scale), 10));
         
         drawCanvas();
     }
@@ -498,8 +480,8 @@ canvas.addEventListener('mousemove', (e) => {
     const deltaX = e.offsetX - lastMouseX;
     const deltaY = e.offsetY - lastMouseY;
     
-    panX += deltaX;
-    panY += deltaY;
+    setPanX(getPanX() + deltaX);
+    setPanY(getPanY() + deltaY);
     
     lastMouseX = e.offsetX;
     lastMouseY = e.offsetY;
@@ -515,25 +497,22 @@ canvas.addEventListener('mouseleave', () => {
     isDragging = false;
 });
 
-// Add event listener for reset zoom button (which now acts as fit to canvas in canvas mode)
+// Add event listener for reset zoom button
 resetZoomBtn.addEventListener('click', () => {
     if (config.viewMode === 'canvas') {
         fitToCanvas();
     } else {
-        zoom = 1;
-        panX = 0;
-        panY = 0;
-        drawCanvas();
+        resetZoomAndPan(drawCanvas);
     }
 });
 
 // Add keyboard shortcuts for zooming
 document.addEventListener('keydown', (e) => {
     if (e.key === '+' || e.key === '=') {
-        zoom = Math.min(10, zoom + 0.1);
+        setZoom(Math.min(10, getZoom() + 0.1));
         drawCanvas();
     } else if (e.key === '-' || e.key === '_') {
-        zoom = Math.max(0.1, zoom - 0.1);
+        setZoom(Math.max(0.1, getZoom() - 0.1));
         drawCanvas();
     }
 });
@@ -620,10 +599,10 @@ exportBtn.addEventListener('click', () => {
         const centerY = (config.canvasHeight - baseHeight) / 2;
         
         // Scale up the image dimensions and position
-        const finalWidth = baseWidth * zoom * scaleFactor;
-        const finalHeight = baseHeight * zoom * scaleFactor;
-        const x = (centerX + panX) * scaleFactor;
-        const y = (centerY + panY) * scaleFactor;
+        const finalWidth = baseWidth * getZoom() * scaleFactor;
+        const finalHeight = baseHeight * getZoom() * scaleFactor;
+        const x = (centerX + getPanX()) * scaleFactor;
+        const y = (centerY + getPanY()) * scaleFactor;
         
         // Create a temporary canvas for the image and filters
         const tempCanvas = document.createElement('canvas');
@@ -693,8 +672,8 @@ function drawCanvas() {
             const centerY = canvasContainer.clientHeight / 2;
             
             // Apply transforms
-            ctx.translate(centerX + panX, centerY + panY);
-            ctx.scale(zoom, zoom);
+            ctx.translate(centerX + getPanX(), centerY + getPanY());
+            ctx.scale(getZoom(), getZoom());
             ctx.translate(-currentImage.naturalWidth / 2, -currentImage.naturalHeight / 2);
             
             // Create a temporary canvas for the image and filters
@@ -751,10 +730,10 @@ function drawCanvas() {
             const centerX = (config.canvasWidth - baseWidth) / 2;
             const centerY = (config.canvasHeight - baseHeight) / 2;
             
-            const finalWidth = baseWidth * zoom;
-            const finalHeight = baseHeight * zoom;
-            const x = centerX + panX;
-            const y = centerY + panY;
+            const finalWidth = baseWidth * getZoom();
+            const finalHeight = baseHeight * getZoom();
+            const x = centerX + getPanX();
+            const y = centerY + getPanY();
             
             // Create a temporary canvas for the image and filters
             const tempCanvas = document.createElement('canvas');
@@ -820,4 +799,4 @@ window.addEventListener('load', () => {
 });
 
 // Add event listener for 100% zoom button
-document.getElementById('zoom100Btn').addEventListener('click', zoomTo100); 
+document.getElementById('zoom100Btn').addEventListener('click', () => zoomTo100(currentImage, drawCanvas)); 
