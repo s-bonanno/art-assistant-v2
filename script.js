@@ -24,7 +24,8 @@ const zoom100Btn = document.getElementById('zoom100Btn');
 
 const MAX_CANVAS_DIMENSION = 1000; // Maximum canvas dimension in pixels
 const EXPORT_SIZE = 2400; // Size of the exported image
-const CM_PER_INCH = 2.54;
+import { convertToUnit, convertFromUnit } from './js/utils/unitConversion.js';
+import { gridConfig, updateColorSwatchSelection, setDefaultGridStyle, initGridStyleListeners } from './js/utils/gridStyle.js';
 
 let currentImage = null;
 let zoom = 1;
@@ -46,20 +47,6 @@ let config = {
     imageOffsetYPercent: 0,  // Track image position as percentage
     viewMode: 'canvas' // Current view mode
 };
-
-// Grid styling configuration
-const gridConfig = {
-    lineWeight: 1, // Default for canvas mode
-    opacity: 1,
-    color: '#ffffff'
-};
-
-// Get grid styling elements
-const gridLineWeight = document.getElementById('gridLineWeight');
-const gridLineWeightValue = document.getElementById('gridLineWeightValue');
-const gridOpacity = document.getElementById('gridOpacity');
-const gridOpacityValue = document.getElementById('gridOpacityValue');
-const colorSwatches = document.querySelectorAll('[data-color]');
 
 // Tab switching functionality
 const tabButtons = document.querySelectorAll('[data-tab]');
@@ -111,14 +98,6 @@ tabButtons.forEach(button => {
 
 // Initialize with Size tab active
 switchTab('size');
-
-function convertToUnit(valueCm, targetUnit) {
-    return targetUnit === 'in' ? valueCm / CM_PER_INCH : valueCm;
-}
-
-function convertFromUnit(value, sourceUnit) {
-    return sourceUnit === 'in' ? value * CM_PER_INCH : value;
-}
 
 function updateGridSizeDisplay() {
     const unit = unitSelect.value;
@@ -230,23 +209,8 @@ function setDefaultGridSize() {
     }
 }
 
-// Set initial grid style values
-function setDefaultGridStyle() {
-    // Set line weight based on mode
-    gridConfig.lineWeight = config.viewMode === 'full' ? 3 : 1;
-    
-    // Update UI elements
-    gridLineWeight.value = gridConfig.lineWeight;
-    gridLineWeightValue.textContent = `${gridConfig.lineWeight}px`;
-    gridOpacity.value = gridConfig.opacity;
-    gridOpacityValue.textContent = '100%';
-    
-    // Update color swatch selection
-    updateColorSwatchSelection();
-    
-    // Redraw canvas
-    drawCanvas();
-}
+// Initialize grid style listeners
+initGridStyleListeners(drawCanvas);
 
 // Add fit to canvas functionality
 function fitToCanvas() {
@@ -289,7 +253,7 @@ viewModeToggle.addEventListener('change', () => {
     resetZoomBtn.style.display = config.viewMode === 'canvas' ? 'inline-flex' : 'none';
     
     // Set default grid style when switching modes
-    setDefaultGridStyle();
+    setDefaultGridStyle(config.viewMode);
     
     // Update grid input based on mode
     if (config.viewMode === 'full') {
@@ -383,42 +347,6 @@ gridSizeIncreaseBtn.addEventListener('click', () => {
     updateGridSpacing();
 });
 
-// Update grid line weight
-gridLineWeight.addEventListener('input', () => {
-    gridConfig.lineWeight = parseFloat(gridLineWeight.value);
-    gridLineWeightValue.textContent = `${gridConfig.lineWeight}px`;
-    drawCanvas();
-});
-
-// Update grid opacity
-gridOpacity.addEventListener('input', () => {
-    gridConfig.opacity = parseFloat(gridOpacity.value);
-    gridOpacityValue.textContent = `${Math.round(gridConfig.opacity * 100)}%`;
-    drawCanvas();
-});
-
-// Handle color swatch clicks
-colorSwatches.forEach(swatch => {
-    swatch.addEventListener('click', () => {
-        gridConfig.color = swatch.dataset.color;
-        updateColorSwatchSelection();
-        drawCanvas();
-    });
-});
-
-// Update color swatch selection
-function updateColorSwatchSelection() {
-    colorSwatches.forEach(swatch => {
-        if (swatch.dataset.color === gridConfig.color) {
-            swatch.classList.add('border-indigo-500');
-            swatch.classList.remove('border-zinc-700');
-        } else {
-            swatch.classList.remove('border-indigo-500');
-            swatch.classList.add('border-zinc-700');
-        }
-    });
-}
-
 // Update image upload handler
 imageInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -438,7 +366,7 @@ imageInput.addEventListener('change', (e) => {
                 resizeCanvasToFit();
                 
                 // Set default grid style when loading new image
-                setDefaultGridStyle();
+                setDefaultGridStyle(config.viewMode);
                 
                 // If in full image mode, fit to screen and set default grid size
                 if (config.viewMode === 'full') {
