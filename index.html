@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-zinc-900">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artist Grid Reference Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        zinc: {
+                            850: '#1f1f23',
+                        },
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="h-full overflow-hidden bg-zinc-900">
+    <!-- Main container -->
+    <div class="relative h-full flex flex-col">
+        <!-- Top toolbar -->
+        <div class="flex-none bg-zinc-850 border-b border-zinc-800/75 shadow-sm">
+            <div class="h-14 px-4 flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="relative">
+                        <input type="file" id="imageInput" accept="image/*" 
+                            class="hidden"
+                            aria-label="Upload image">
+                        <button onclick="document.getElementById('imageInput').click()"
+                            class="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium
+                                   bg-zinc-800 text-zinc-200 hover:bg-zinc-700 hover:text-zinc-100
+                                   focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-zinc-850">
+                            <i data-lucide="image-plus" class="w-4 h-4"></i>
+                            Choose Image
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <button id="fitToScreenBtn" class="hidden inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium
+                                   bg-zinc-800 text-zinc-200 hover:bg-zinc-700 hover:text-zinc-100
+                                   focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-zinc-850">
+                        <i data-lucide="maximize" class="w-4 h-4"></i>
+                        Fit to Screen
+                    </button>
+                    <button id="zoom100Btn" class="hidden inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium
+                                   bg-zinc-800 text-zinc-200 hover:bg-zinc-700 hover:text-zinc-100
+                                   focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-zinc-850">
+                        <i data-lucide="zoom-in" class="w-4 h-4"></i>
+                        100%
+                    </button>
+                    <button id="resetZoomBtn" class="hidden inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium
+                                   bg-zinc-800 text-zinc-200 hover:bg-zinc-700 hover:text-zinc-100
+                                   focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-zinc-850">
+                        <i data-lucide="maximize" class="w-4 h-4"></i>
+                        Fit to Canvas
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Canvas area - fills available space -->
+        <main class="flex-1 min-h-0 flex items-center justify-center p-4">
+            <!-- Outer container with max dimensions -->
+            <div class="relative w-full h-full flex items-center justify-center">
+                <!-- Canvas preview container -->
+                <div class="relative w-full h-full max-w-full max-h-full overflow-hidden flex justify-center items-center">
+                    <!-- Canvas wrapper with padding -->
+                    <div class="p-4 box-border">
+                        <div id="canvasContainer" class="relative">
+                            <canvas id="canvas" class="rounded-sm bg-zinc-850 shadow-lg"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Settings panels - slide up from bottom -->
+        <div class="fixed inset-x-0 bottom-16 transition-transform duration-200 ease-in-out transform translate-y-full" id="settingsPanels">
+            <!-- Grid settings panel -->
+            <div class="hidden bg-zinc-850 border-t border-zinc-800 p-4 space-y-4" id="gridPanel">
+                <!-- Tab Navigation -->
+                <div class="flex border-b border-zinc-800 -mx-4 -mt-4">
+                    <button class="flex-1 px-4 py-2 text-sm font-medium text-zinc-400 hover:text-zinc-200 border-b-2 border-transparent" data-tab="size">
+                        Size
+                    </button>
+                    <button class="flex-1 px-4 py-2 text-sm font-medium text-zinc-400 hover:text-zinc-200 border-b-2 border-transparent" data-tab="style">
+                        Style
+                    </button>
+                    <button class="flex-1 px-4 py-2 text-sm font-medium text-zinc-400 hover:text-zinc-200 border-b-2 border-transparent" data-tab="type">
+                        Type
+                    </button>
+                </div>
+
+                <!-- Tab Content Container -->
+                <div class="relative min-h-[120px]">
+                    <!-- Size Tab -->
+                    <div class="absolute inset-0" data-tab-content="size">
+                        <div class="space-y-4">
+                            <div class="flex items-center gap-3">
+                                <input type="number" id="gridSquareSize" value="5" min="0.1" step="0.1"
+                                    class="block w-20 rounded-md border-0 bg-zinc-800 py-1.5 px-3 text-zinc-200 
+                                           shadow-sm ring-1 ring-inset ring-zinc-700 focus:ring-2 focus:ring-indigo-600 
+                                           sm:text-sm sm:leading-6">
+                                <select id="unitSelect"
+                                    class="rounded-md border-0 bg-zinc-800 py-1.5 pl-3 pr-8 text-zinc-200 
+                                           shadow-sm ring-1 ring-inset ring-zinc-700 focus:ring-2 focus:ring-indigo-600
+                                           sm:text-sm sm:leading-6">
+                                    <option value="cm">cm</option>
+                                    <option value="in">in</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <button id="gridSizeDecreaseBtn" class="p-1 rounded-md text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/75">
+                                    <i data-lucide="minus" class="w-4 h-4"></i>
+                                </button>
+                                <input type="range" id="gridSizeSlider" min="1" max="2000" step="1" value="5"
+                                    class="flex-1 h-2 rounded-lg appearance-none cursor-pointer bg-zinc-700">
+                                <button id="gridSizeIncreaseBtn" class="p-1 rounded-md text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/75">
+                                    <i data-lucide="plus" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                            <div class="text-xs text-zinc-400" id="gridSizeLabel">
+                                Grid size: <span id="gridSizeValue">5 cm</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Style Tab -->
+                    <div class="absolute inset-0 hidden" data-tab-content="style">
+                        <div class="space-y-2">
+                            <!-- Line Weight -->
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-zinc-400 w-20">Line Weight</span>
+                                <input type="range" id="gridLineWeight" min="0.5" max="5" step="0.5" value="1"
+                                    class="flex-1 h-2 rounded-lg appearance-none cursor-pointer bg-zinc-700">
+                                <span class="text-xs text-zinc-400 w-12 text-right" id="gridLineWeightValue">1px</span>
+                            </div>
+
+                            <!-- Opacity -->
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-zinc-400 w-20">Opacity</span>
+                                <input type="range" id="gridOpacity" min="0" max="1" step="0.1" value="0.5"
+                                    class="flex-1 h-2 rounded-lg appearance-none cursor-pointer bg-zinc-700">
+                                <span class="text-xs text-zinc-400 w-12 text-right" id="gridOpacityValue">50%</span>
+                            </div>
+
+                            <!-- Color Swatches -->
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-zinc-400 w-20">Color</span>
+                                <div class="flex-1 flex gap-2">
+                                    <button class="w-6 h-6 rounded-full bg-white border-2 border-zinc-700 hover:border-zinc-500" data-color="#ffffff"></button>
+                                    <button class="w-6 h-6 rounded-full bg-black border-2 border-zinc-700 hover:border-zinc-500" data-color="#000000"></button>
+                                    <button class="w-6 h-6 rounded-full bg-zinc-500 border-2 border-zinc-700 hover:border-zinc-500" data-color="#71717a"></button>
+                                    <button class="w-6 h-6 rounded-full bg-red-500 border-2 border-zinc-700 hover:border-zinc-500" data-color="#ef4444"></button>
+                                    <button class="w-6 h-6 rounded-full bg-blue-500 border-2 border-zinc-700 hover:border-zinc-500" data-color="#3b82f6"></button>
+                                    <button class="w-6 h-6 rounded-full bg-yellow-500 border-2 border-zinc-700 hover:border-zinc-500" data-color="#eab308"></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Type Tab -->
+                    <div class="absolute inset-0 hidden" data-tab-content="type">
+                        <div class="space-y-2">
+                            <!-- Type controls will be added here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Canvas settings panel -->
+            <div class="hidden bg-zinc-850 border-t border-zinc-800 p-4 space-y-4" id="canvasPanel">
+                <div class="pt-2">
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="viewModeToggle" class="sr-only peer">
+                        <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:bg-white peer-checked:bg-indigo-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                        <span class="ml-3 text-sm font-medium text-zinc-400">Crop to canvas</span>
+                    </label>
+                </div>
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-zinc-400">Canvas Size</label>
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2">
+                            <input type="number" id="canvasWidth" value="50" min="1" step="1"
+                                class="block w-20 rounded-md border-0 bg-zinc-800 py-1.5 px-3 text-zinc-200 
+                                       shadow-sm ring-1 ring-inset ring-zinc-700 focus:ring-2 focus:ring-indigo-600 
+                                       sm:text-sm sm:leading-6">
+                            <span class="text-zinc-400">×</span>
+                            <input type="number" id="canvasHeight" value="50" min="1" step="1"
+                                class="block w-20 rounded-md border-0 bg-zinc-800 py-1.5 px-3 text-zinc-200 
+                                       shadow-sm ring-1 ring-inset ring-zinc-700 focus:ring-2 focus:ring-indigo-600 
+                                       sm:text-sm sm:leading-6">
+                        </div>
+                        <select id="canvasUnitSelect"
+                            class="rounded-md border-0 bg-zinc-800 py-1.5 pl-3 pr-8 text-zinc-200 
+                                   shadow-sm ring-1 ring-inset ring-zinc-700 focus:ring-2 focus:ring-indigo-600
+                                   sm:text-sm sm:leading-6">
+                            <option value="cm">cm</option>
+                            <option value="in">in</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters panel -->
+            <div class="hidden bg-zinc-850 border-t border-zinc-800 p-4 space-y-4" id="filtersPanel">
+                <!-- Posterise Filter -->
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <label class="text-sm font-medium text-zinc-400">Posterise</label>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="posteriseToggle" class="sr-only peer">
+                            <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:bg-white peer-checked:bg-indigo-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                        </label>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs text-zinc-400 w-20">Levels</span>
+                        <input type="range" id="posteriseLevels" min="2" max="10" step="1" value="4"
+                            class="flex-1 h-2 rounded-lg appearance-none cursor-pointer bg-zinc-700">
+                        <span class="text-xs text-zinc-400 w-12 text-right" id="posteriseLevelsValue">4</span>
+                    </div>
+                </div>
+
+                <!-- Edge Detection Filter -->
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <label class="text-sm font-medium text-zinc-400">Edge Detection</label>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="edgesToggle" class="sr-only peer">
+                            <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:bg-white peer-checked:bg-indigo-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                        </label>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs text-zinc-400 w-20">Strength</span>
+                        <input type="range" id="edgesStrength" min="0" max="5" step="0.1" value="2"
+                            class="flex-1 h-2 rounded-lg appearance-none cursor-pointer bg-zinc-700">
+                        <span class="text-xs text-zinc-400 w-12 text-right" id="edgesStrengthValue">2</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs text-zinc-400 w-20">Opacity</span>
+                        <input type="range" id="edgesOpacity" min="0" max="1" step="0.1" value="1"
+                            class="flex-1 h-2 rounded-lg appearance-none cursor-pointer bg-zinc-700">
+                        <span class="text-xs text-zinc-400 w-12 text-right" id="edgesOpacityValue">100%</span>
+                    </div>
+                </div>
+
+                <!-- Light Split Filter -->
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <label class="text-sm font-medium text-zinc-400">Light Split</label>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="lightSplitToggle" class="sr-only peer">
+                            <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:bg-white peer-checked:bg-indigo-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                        </label>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs text-zinc-400 w-20">Shadows</span>
+                        <input type="range" id="shadowThreshold" min="0" max="50" step="1" value="30"
+                            class="flex-1 h-2 rounded-lg appearance-none cursor-pointer bg-zinc-700">
+                        <span class="text-xs text-zinc-400 w-12 text-right" id="shadowThresholdValue">30%</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs text-zinc-400 w-20">Highlights</span>
+                        <input type="range" id="highlightThreshold" min="50" max="100" step="1" value="70"
+                            class="flex-1 h-2 rounded-lg appearance-none cursor-pointer bg-zinc-700">
+                        <span class="text-xs text-zinc-400 w-12 text-right" id="highlightThresholdValue">70%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom toolbar -->
+        <div class="flex-none bg-zinc-850 border-t border-zinc-800">
+            <div class="flex justify-around items-center h-16 px-4">
+                <button class="p-2 rounded-md text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/75" data-panel="gridPanel">
+                    <i data-lucide="grid" class="w-6 h-6"></i>
+                    <span class="sr-only">Grid Settings</span>
+                </button>
+                <button class="p-2 rounded-md text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/75" data-panel="canvasPanel">
+                    <i data-lucide="crop" class="w-6 h-6"></i>
+                    <span class="sr-only">Canvas Settings</span>
+                </button>
+                <button class="p-2 rounded-md text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/75" data-panel="filtersPanel">
+                    <i data-lucide="sliders" class="w-6 h-6"></i>
+                    <span class="sr-only">Filters</span>
+                </button>
+                <button class="p-2 rounded-md text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/75" id="exportBtn">
+                    <i data-lucide="download" class="w-6 h-6"></i>
+                    <span class="sr-only">Export</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .hide-scrollbars {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;     /* Firefox */
+        }
+
+        .hide-scrollbars::-webkit-scrollbar {
+            display: none;             /* Chrome, Safari */
+        }
+    </style>
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Panel toggle functionality
+        const settingsPanels = document.getElementById('settingsPanels');
+        const panels = document.querySelectorAll('[id$="Panel"]');
+        const toolbarButtons = document.querySelectorAll('[data-panel]');
+
+        let activePanel = null;
+
+        toolbarButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const panelId = button.dataset.panel;
+                const panel = document.getElementById(panelId);
+                
+                // If clicking the active panel button, close it
+                if (activePanel === panel) {
+                    settingsPanels.classList.add('translate-y-full');
+                    panel.classList.add('hidden');
+                    button.classList.remove('text-indigo-400');
+                    activePanel = null;
+                    return;
+                }
+
+                // Hide all panels and reset button styles
+                panels.forEach(p => p.classList.add('hidden'));
+                toolbarButtons.forEach(b => b.classList.remove('text-indigo-400'));
+
+                // Show the selected panel
+                if (panel) {
+                    settingsPanels.classList.remove('translate-y-full');
+                    panel.classList.remove('hidden');
+                    button.classList.add('text-indigo-400');
+                    activePanel = panel;
+                }
+            });
+        });
+
+        // Close panel when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!settingsPanels.contains(e.target) && 
+                !e.target.closest('[data-panel]') &&
+                !settingsPanels.classList.contains('translate-y-full')) {
+                settingsPanels.classList.add('translate-y-full');
+                panels.forEach(p => p.classList.add('hidden'));
+                toolbarButtons.forEach(b => b.classList.remove('text-indigo-400'));
+                activePanel = null;
+            }
+        });
+    </script>
+    <script src="script.js"></script>
+</body>
+</html> 
