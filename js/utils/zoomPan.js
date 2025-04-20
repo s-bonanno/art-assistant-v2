@@ -11,6 +11,9 @@ let _drawCanvas = null;
 // Touch gesture state
 let initialDistance = 0;
 let initialZoom = 1;
+let lastTouchX = 0;
+let lastTouchY = 0;
+let isTouchPanning = false;
 
 // Getters and setters for state
 export function getZoom() { return _zoom; }
@@ -78,12 +81,18 @@ export function initZoomPanListeners(canvas, currentImage, drawCanvas) {
 
     // Touch gesture handling
     canvas.addEventListener('touchstart', (e) => {
+        console.log('Touch start:', e.touches.length, 'touches');
         if (e.touches.length === 2) {
             initialDistance = Math.hypot(
                 e.touches[0].clientX - e.touches[1].clientX,
                 e.touches[0].clientY - e.touches[1].clientY
             );
             initialZoom = _zoom;
+        } else if (e.touches.length === 1) {
+            isTouchPanning = true;
+            lastTouchX = e.touches[0].clientX;
+            lastTouchY = e.touches[0].clientY;
+            console.log('Starting touch pan at:', lastTouchX, lastTouchY);
         }
     });
 
@@ -99,6 +108,31 @@ export function initZoomPanListeners(canvas, currentImage, drawCanvas) {
             _zoom = Math.min(Math.max(0.1, initialZoom * scale), 10);
             
             scheduleRedraw();
+        } else if (e.touches.length === 1 && isTouchPanning) {
+            e.preventDefault();
+            const currentTouchX = e.touches[0].clientX;
+            const currentTouchY = e.touches[0].clientY;
+            
+            const deltaX = currentTouchX - lastTouchX;
+            const deltaY = currentTouchY - lastTouchY;
+            
+            _panX += deltaX;
+            _panY += deltaY;
+            
+            lastTouchX = currentTouchX;
+            lastTouchY = currentTouchY;
+            
+            console.log('Touch panning - delta:', deltaX, deltaY, 'new pan:', _panX, _panY);
+            scheduleRedraw();
+        }
+    });
+
+    canvas.addEventListener('touchend', (e) => {
+        console.log('Touch end');
+        isTouchPanning = false;
+        if (e.touches.length === 0) {
+            initialDistance = 0;
+            initialZoom = 1;
         }
     });
 
