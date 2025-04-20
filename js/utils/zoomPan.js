@@ -48,20 +48,15 @@ export function resetZoomAndPan(drawCanvas) {
     drawCanvas();
 }
 
-export function zoomTo100(currentImage, drawCanvas) {
+export function zoomTo100(currentImage, drawCanvas, config) {
     if (!currentImage) return;
     
     // Set zoom to 1 (100%)
     _zoom = 1;
     
-    // Center the image
-    const container = document.querySelector('.relative.w-full');
-    const containerWidth = container.clientWidth;
-    const containerHeight = container.clientHeight;
-    
-    // Calculate center position
-    _panX = (containerWidth - currentImage.naturalWidth) / 2;
-    _panY = (containerHeight - currentImage.naturalHeight) / 2;
+    // Reset pan to center
+    _panX = 0;
+    _panY = 0;
     
     // Redraw canvas
     drawCanvas();

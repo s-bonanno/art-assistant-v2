@@ -24,7 +24,7 @@
     <!-- Main container -->
     <div class="relative h-full flex flex-col">
         <!-- Top toolbar -->
-        <div class="flex-none bg-zinc-850 border-b border-zinc-800/75 shadow-sm">
+        <div class="flex-none bg-zinc-800/50 border-b border-zinc-700/20">
             <div class="h-14 px-4 flex items-center justify-between">
                 <div class="flex items-center gap-4">
                     <div class="relative">
@@ -32,30 +32,30 @@
                             class="hidden"
                             aria-label="Upload image">
                         <button onclick="document.getElementById('imageInput').click()"
-                            class="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium
-                                   bg-zinc-800 text-zinc-200 hover:bg-zinc-700 hover:text-zinc-100
-                                   focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-zinc-850">
+                            class="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium
+                                   text-zinc-400 hover:bg-zinc-700/50 hover:text-zinc-200
+                                   transition-colors duration-150">
                             <i data-lucide="image-plus" class="w-4 h-4"></i>
                             Choose Image
                         </button>
                     </div>
                 </div>
-                <div>
-                    <button id="fitToScreenBtn" class="hidden inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium
-                                   bg-zinc-800 text-zinc-200 hover:bg-zinc-700 hover:text-zinc-100
-                                   focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-zinc-850">
+                <div class="flex items-center gap-3">
+                    <button id="fitToScreenBtn" class="hidden inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium
+                                   text-zinc-400 hover:bg-zinc-700/50 hover:text-zinc-200
+                                   transition-colors duration-150">
                         <i data-lucide="maximize" class="w-4 h-4"></i>
                         Fit to Screen
                     </button>
-                    <button id="zoom100Btn" class="hidden inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium
-                                   bg-zinc-800 text-zinc-200 hover:bg-zinc-700 hover:text-zinc-100
-                                   focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-zinc-850">
+                    <button id="zoom100Btn" class="hidden inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium
+                                   text-zinc-400 hover:bg-zinc-700/50 hover:text-zinc-200
+                                   transition-colors duration-150">
                         <i data-lucide="zoom-in" class="w-4 h-4"></i>
                         100%
                     </button>
-                    <button id="resetZoomBtn" class="hidden inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium
-                                   bg-zinc-800 text-zinc-200 hover:bg-zinc-700 hover:text-zinc-100
-                                   focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-zinc-850">
+                    <button id="resetZoomBtn" class="hidden inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium
+                                   text-zinc-400 hover:bg-zinc-700/50 hover:text-zinc-200
+                                   transition-colors duration-150">
                         <i data-lucide="maximize" class="w-4 h-4"></i>
                         Fit to Canvas
                     </button>

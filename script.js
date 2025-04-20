@@ -758,9 +758,13 @@ function drawCanvas() {
             const centerX = canvasContainer.clientWidth / 2;
             const centerY = canvasContainer.clientHeight / 2;
             
-            // Apply transforms
-            ctx.translate(centerX + getPanX(), centerY + getPanY());
+            // Reset transform
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            
+            // Apply transforms in the correct order
+            ctx.translate(centerX, centerY);
             ctx.scale(getZoom(), getZoom());
+            ctx.translate(getPanX(), getPanY());
             ctx.translate(-currentImage.naturalWidth / 2, -currentImage.naturalHeight / 2);
             
             // Create a temporary canvas for the image and filters
@@ -882,4 +886,4 @@ window.addEventListener('load', () => {
 });
 
 // Add event listener for 100% zoom button
-document.getElementById('zoom100Btn').addEventListener('click', () => zoomTo100(currentImage, drawCanvas)); 
+document.getElementById('zoom100Btn').addEventListener('click', () => zoomTo100(currentImage, drawCanvas, config)); 
