@@ -317,89 +317,62 @@
         <!-- Settings panels - slide up from bottom -->
         <div class="fixed inset-x-0 bottom-16 transition-transform duration-200 ease-in-out transform translate-y-full" id="settingsPanels">
             <!-- Grid settings panel -->
-            <div class="hidden bg-zinc-850 border-t border-zinc-800 p-4 space-y-4" id="gridPanel">
-                <!-- Tab Navigation -->
-                <div class="tab-group">
-                    <button class="tab-button active" data-tab="size">Size</button>
-                    <button class="tab-button" data-tab="style">Style</button>
-                    <button class="tab-button" data-tab="type">Type</button>
+            <div class="hidden bg-zinc-850 border-t border-zinc-800 p-4 space-y-6" id="gridPanel">
+                <!-- Grid Size Controls -->
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-zinc-400">Size</span>
+                        <div class="flex items-center gap-2">
+                            <input type="number" id="gridSquareSize" value="5" min="0.1" step="0.1"
+                                class="w-16 text-xs text-zinc-400 bg-zinc-850 border border-zinc-700 rounded-md px-2 py-1.5">
+                            <div class="relative group">
+                                <select id="unitSelect" class="w-16 text-xs text-zinc-400 bg-zinc-850 border border-zinc-700 rounded-md pl-2 pr-6 py-1.5 appearance-none hover:text-zinc-200 hover:border-zinc-600 focus:text-zinc-200">
+                                    <option value="cm">cm</option>
+                                    <option value="in">in</option>
+                                </select>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 pointer-events-none text-zinc-400 group-hover:text-zinc-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-zinc-400" id="gridSizeValue">5 cm</span>
+                    </div>
+                    <input type="range" id="gridSizeSlider" min="1" max="2000" step="1" value="5"
+                        class="w-full">
                 </div>
 
-                <!-- Tab Content Container -->
-                <div class="relative min-h-[120px] pt-2">
-                    <!-- Size Tab -->
-                    <div class="absolute inset-0 pt-2" data-tab-content="size">
-                        <div class="space-y-4">
-                            <!-- Grid Size Controls -->
-                            <div class="space-y-2">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-xs text-zinc-400">Size</span>
-                                    <div class="flex items-center gap-2">
-                                        <input type="number" id="gridSquareSize" value="5" min="0.1" step="0.1"
-                                            class="w-16 text-xs text-zinc-400 bg-zinc-850 border border-zinc-700 rounded-md px-2 py-1.5">
-                                        <div class="relative group">
-                                            <select id="unitSelect" class="w-16 text-xs text-zinc-400 bg-zinc-850 border border-zinc-700 rounded-md pl-2 pr-6 py-1.5 appearance-none hover:text-zinc-200 hover:border-zinc-600 focus:text-zinc-200">
-                                                <option value="cm">cm</option>
-                                                <option value="in">in</option>
-                                            </select>
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 pointer-events-none text-zinc-400 group-hover:text-zinc-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                            </svg>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="flex items-center justify-between">
-                                    <span class="text-xs text-zinc-400" id="gridSizeValue">5 cm</span>
-                                </div>
-                                <input type="range" id="gridSizeSlider" min="1" max="2000" step="1" value="5"
-                                    class="w-full">
-                            </div>
-                        </div>
+                <!-- Line Weight -->
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-zinc-400">Line Weight</span>
+                        <span class="text-xs text-zinc-400" id="gridLineWeightValue">1px</span>
                     </div>
+                    <input type="range" id="gridLineWeight" min="0.5" max="5" step="0.5" value="1"
+                        class="w-full">
+                </div>
 
-                    <!-- Style Tab -->
-                    <div class="absolute inset-0 hidden" data-tab-content="style">
-                        <div class="space-y-4">
-                            <!-- Line Weight -->
-                            <div class="space-y-2">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-xs text-zinc-400">Line Weight</span>
-                                    <span class="text-xs text-zinc-400" id="gridLineWeightValue">1px</span>
-                                </div>
-                                <input type="range" id="gridLineWeight" min="0.5" max="5" step="0.5" value="1"
-                                    class="w-full">
-                            </div>
-
-                            <!-- Opacity -->
-                            <div class="space-y-2">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-xs text-zinc-400">Opacity</span>
-                                    <span class="text-xs text-zinc-400" id="gridOpacityValue">50%</span>
-                                </div>
-                                <input type="range" id="gridOpacity" min="0" max="1" step="0.1" value="0.5"
-                                    class="w-full">
-                            </div>
-
-                            <!-- Color Swatches -->
-                            <div class="space-y-2">
-                                <span class="text-xs text-zinc-400">Color</span>
-                                <div class="flex gap-2">
-                                    <button class="w-6 h-6 rounded-full bg-white border-2 border-zinc-700 hover:border-zinc-500" data-color="#ffffff"></button>
-                                    <button class="w-6 h-6 rounded-full bg-black border-2 border-zinc-700 hover:border-zinc-500" data-color="#000000"></button>
-                                    <button class="w-6 h-6 rounded-full bg-zinc-500 border-2 border-zinc-700 hover:border-zinc-500" data-color="#71717a"></button>
-                                    <button class="w-6 h-6 rounded-full bg-red-500 border-2 border-zinc-700 hover:border-zinc-500" data-color="#ef4444"></button>
-                                    <button class="w-6 h-6 rounded-full bg-blue-500 border-2 border-zinc-700 hover:border-zinc-500" data-color="#3b82f6"></button>
-                                    <button class="w-6 h-6 rounded-full bg-yellow-500 border-2 border-zinc-700 hover:border-zinc-500" data-color="#eab308"></button>
-                                </div>
-                            </div>
-                        </div>
+                <!-- Opacity -->
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-zinc-400">Opacity</span>
+                        <span class="text-xs text-zinc-400" id="gridOpacityValue">50%</span>
                     </div>
+                    <input type="range" id="gridOpacity" min="0" max="1" step="0.1" value="0.5"
+                        class="w-full">
+                </div>
 
-                    <!-- Type Tab -->
-                    <div class="absolute inset-0 hidden" data-tab-content="type">
-                        <div class="space-y-2">
-                            <!-- Type controls will be added here -->
-                        </div>
+                <!-- Color -->
+                <div class="space-y-2">
+                    <span class="text-xs text-zinc-400">Color</span>
+                    <div class="flex gap-2">
+                        <button class="w-6 h-6 rounded-full bg-white border-2 border-zinc-700 hover:border-zinc-500" data-color="#ffffff"></button>
+                        <button class="w-6 h-6 rounded-full bg-black border-2 border-zinc-700 hover:border-zinc-500" data-color="#000000"></button>
+                        <button class="w-6 h-6 rounded-full bg-zinc-500 border-2 border-zinc-700 hover:border-zinc-500" data-color="#71717a"></button>
+                        <button class="w-6 h-6 rounded-full bg-red-500 border-2 border-zinc-700 hover:border-zinc-500" data-color="#ef4444"></button>
+                        <button class="w-6 h-6 rounded-full bg-blue-500 border-2 border-zinc-700 hover:border-zinc-500" data-color="#3b82f6"></button>
+                        <button class="w-6 h-6 rounded-full bg-yellow-500 border-2 border-zinc-700 hover:border-zinc-500" data-color="#eab308"></button>
                     </div>
                 </div>
             </div>
