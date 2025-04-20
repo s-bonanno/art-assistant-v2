@@ -712,7 +712,7 @@ exportBtn.addEventListener('click', () => {
         exportCtx.beginPath();
         exportCtx.strokeStyle = gridConfig.color;
         exportCtx.globalAlpha = gridConfig.opacity;
-        exportCtx.lineWidth = Math.max(1, Math.floor(gridConfig.lineWeight * scaleFactor));
+        exportCtx.lineWidth = gridConfig.lineWeight;
         
         // Draw vertical lines
         const exportGridSpacing = config.gridSpacing * scaleFactor;
@@ -843,7 +843,9 @@ function drawCanvas() {
             ctx.beginPath();
             ctx.strokeStyle = gridConfig.color;
             ctx.globalAlpha = gridConfig.opacity;
-            ctx.lineWidth = gridConfig.lineWeight;
+            // Scale line width to match export appearance
+            const previewScale = config.canvasWidth / EXPORT_SIZE;
+            ctx.lineWidth = gridConfig.lineWeight * previewScale;
             
             const gridSpacing = config.gridSpacing;
             const numVerticalLines = Math.ceil(config.canvasWidth / gridSpacing) + 1;
