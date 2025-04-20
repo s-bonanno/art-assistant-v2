@@ -619,7 +619,6 @@ exportBtn.addEventListener('click', () => {
         );
 
         if (hasActiveFilters) {
-            console.log('Applying filters during export:', filters);
             applyFilters(tempCtx, tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
         }
 
@@ -692,7 +691,6 @@ exportBtn.addEventListener('click', () => {
         );
 
         if (hasActiveFilters) {
-            console.log('Applying filters during export:', filters);
             applyFilters(tempCtx, tempCanvas, 0, 0, finalWidth, finalHeight);
         }
 

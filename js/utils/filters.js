@@ -22,79 +22,28 @@ export const filterCache = {
 
 // Apply filters to canvas
 export function applyFilters(ctx, canvas, x, y, width, height) {
-    if (!canvas) return;
-
-    console.log('Applying filters:', {
-        enabledFilters: {
-            posterise: filters.posterise.enabled,
-            edges: filters.edges.enabled,
-            lightSplit: filters.lightSplit.enabled
-        },
-        lightValues: filters.light,
-        cacheState: {
-            needsUpdate: filterCache.needsUpdate,
-            width: filterCache.width,
-            height: filterCache.height,
-            hasImage: !!filterCache.image
-        }
-    });
-
-    // Check if light values have changed
-    const lightValuesChanged = Object.keys(filters.light).some(key => 
-        filters.light[key] !== filterCache.lastLightValues[key]
-    );
-
-    console.log('Light values changed:', lightValuesChanged);
-
-    // Check if we need to update the cache
-    if (filterCache.needsUpdate || 
-        filterCache.width !== width || 
-        filterCache.height !== height ||
-        lightValuesChanged) {
-        
-        console.log('Updating filter cache');
-        
-        // Create a temporary canvas for filter processing
-        const tempCanvas = document.createElement('canvas');
-        const tempCtx = tempCanvas.getContext('2d');
-        tempCanvas.width = width;
-        tempCanvas.height = height;
-
-        // Draw the image portion we want to filter
-        tempCtx.drawImage(canvas, x, y, width, height, 0, 0, width, height);
-
-        // Apply light adjustments first
-        applyLightAdjustments(tempCtx, tempCanvas);
-
-        // Apply other filters
-        if (filters.posterise.enabled) {
-            console.log('Applying posterise filter');
-            applyPosterise(tempCtx, tempCanvas, filters.posterise.levels);
-        }
-
-        if (filters.edges.enabled) {
-            console.log('Applying edge detection filter');
-            applyEdgeDetection(tempCtx, tempCanvas, filters.edges.strength, filters.edges.opacity);
-        }
-
-        if (filters.lightSplit.enabled) {
-            console.log('Applying light split filter');
-            applyLightSplit(tempCtx, tempCanvas, filters.lightSplit.shadow, filters.lightSplit.highlight);
-        }
-
-        // Update the cache
-        filterCache.image = tempCanvas;
-        filterCache.width = width;
-        filterCache.height = height;
-        filterCache.needsUpdate = false;
-        // Store current light values
-        Object.assign(filterCache.lastLightValues, filters.light);
-    } else {
-        console.log('Using cached filter result');
+    const imageData = ctx.getImageData(x, y, width, height);
+    const data = imageData.data;
+    
+    // Apply filters in sequence
+    if (filters.posterise && filters.posterise.enabled) {
+        applyPosteriseFilter(data, filters.posterise.levels);
     }
-
-    // Draw from cache
-    ctx.drawImage(filterCache.image, x, y);
+    
+    if (filters.edgeDetection && filters.edgeDetection.enabled) {
+        applyEdgeDetectionFilter(data, width, height);
+    }
+    
+    if (filters.lightSplit && filters.lightSplit.enabled) {
+        applyLightSplitFilter(data, filters.lightSplit.threshold);
+    }
+    
+    // Apply light adjustments last
+    if (filters.light) {
+        applyLightAdjustments(data, filters.light);
+    }
+    
+    ctx.putImageData(imageData, x, y);
 }
 
 // Apply light adjustments

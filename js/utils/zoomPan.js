@@ -81,7 +81,6 @@ export function initZoomPanListeners(canvas, currentImage, drawCanvas) {
 
     // Touch gesture handling
     canvas.addEventListener('touchstart', (e) => {
-        console.log('Touch start:', e.touches.length, 'touches');
         if (e.touches.length === 2) {
             initialDistance = Math.hypot(
                 e.touches[0].clientX - e.touches[1].clientX,
@@ -92,7 +91,6 @@ export function initZoomPanListeners(canvas, currentImage, drawCanvas) {
             isTouchPanning = true;
             lastTouchX = e.touches[0].clientX;
             lastTouchY = e.touches[0].clientY;
-            console.log('Starting touch pan at:', lastTouchX, lastTouchY);
         }
     });
 
@@ -122,13 +120,11 @@ export function initZoomPanListeners(canvas, currentImage, drawCanvas) {
             lastTouchX = currentTouchX;
             lastTouchY = currentTouchY;
             
-            console.log('Touch panning - delta:', deltaX, deltaY, 'new pan:', _panX, _panY);
             scheduleRedraw();
         }
     });
 
     canvas.addEventListener('touchend', (e) => {
-        console.log('Touch end');
         isTouchPanning = false;
         if (e.touches.length === 0) {
             initialDistance = 0;
