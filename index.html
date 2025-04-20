@@ -167,6 +167,92 @@
         .tab-button:hover:not(.active) {
             color: rgba(255, 255, 255, 0.6);
         }
+
+        /* Lightroom-style dropdown styling */
+        select {
+            -webkit-appearance: none;
+            appearance: none;
+            background-color: #1f1f23;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.4);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            min-width: 60px;
+            line-height: 1.5;
+            font-weight: 400;
+            height: 2rem;
+        }
+
+        select:hover {
+            color: rgba(255, 255, 255, 0.6);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        select:focus {
+            outline: none;
+            color: rgba(255, 255, 255, 0.9);
+            border-color: rgba(99, 102, 241, 0.5);
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+        }
+
+        select option {
+            background-color: #1f1f23;
+            color: rgba(255, 255, 255, 0.4);
+            padding: 0.5rem 0.75rem;
+            font-size: 12px;
+            font-weight: 400;
+            line-height: 1.5;
+            height: 2rem;
+            border-radius: 6px;
+        }
+
+        /* Style the dropdown when it's open */
+        select:focus option:checked {
+            background-color: rgba(99, 102, 241, 0.1);
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        /* Remove default dropdown arrow in Firefox */
+        select::-ms-expand {
+            display: none;
+        }
+
+        select::-webkit-select-arrow {
+            display: none;
+        }
+
+        select::-moz-focus-inner {
+            border: 0;
+        }
+
+        select:-moz-focusring {
+            color: transparent;
+            text-shadow: 0 0 0 rgba(255, 255, 255, 0.4);
+        }
+
+        /* Input field styling to match select */
+        input[type="number"] {
+            -webkit-appearance: none;
+            appearance: none;
+            background-color: #1f1f23;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            padding: 0.5rem 0.75rem;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.4);
+            line-height: 1.5;
+            font-weight: 400;
+            height: 2rem;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            color: rgba(255, 255, 255, 0.9);
+            border-color: rgba(99, 102, 241, 0.5);
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+        }
     </style>
 </head>
 <body class="h-full overflow-hidden bg-zinc-900">
@@ -244,32 +330,29 @@
                     <!-- Size Tab -->
                     <div class="absolute inset-0 pt-2" data-tab-content="size">
                         <div class="space-y-4">
-                            <!-- Grid Size Input -->
+                            <!-- Grid Size Controls -->
                             <div class="space-y-2">
                                 <div class="flex items-center justify-between">
-                                    <span class="text-xs text-zinc-400">Grid Size</span>
+                                    <span class="text-xs text-zinc-400">Size</span>
                                     <div class="flex items-center gap-2">
                                         <input type="number" id="gridSquareSize" value="5" min="0.1" step="0.1"
-                                            class="block w-20 rounded-md border-0 bg-zinc-800 py-1.5 px-3 text-zinc-200 
-                                                   shadow-sm ring-1 ring-inset ring-zinc-700 focus:ring-2 focus:ring-indigo-600 
-                                                   sm:text-sm sm:leading-6">
-                                        <select id="unitSelect"
-                                            class="rounded-md border-0 bg-zinc-800 py-1.5 pl-3 pr-8 text-zinc-200 
-                                                   shadow-sm ring-1 ring-inset ring-zinc-700 focus:ring-2 focus:ring-indigo-600
-                                                   sm:text-sm sm:leading-6">
-                                            <option value="cm">cm</option>
-                                            <option value="in">in</option>
-                                        </select>
+                                            class="w-16 text-xs text-zinc-400 bg-zinc-850 border border-zinc-700 rounded-md px-2 py-1.5">
+                                        <div class="relative group">
+                                            <select id="unitSelect" class="w-16 text-xs text-zinc-400 bg-zinc-850 border border-zinc-700 rounded-md pl-2 pr-6 py-1.5 appearance-none hover:text-zinc-200 hover:border-zinc-600 focus:text-zinc-200">
+                                                <option value="cm">cm</option>
+                                                <option value="in">in</option>
+                                            </select>
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 pointer-events-none text-zinc-400 group-hover:text-zinc-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="space-y-2">
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-xs text-zinc-400">Size</span>
-                                        <span class="text-xs text-zinc-400" id="gridSizeValue">5 cm</span>
-                                    </div>
-                                    <input type="range" id="gridSizeSlider" min="1" max="2000" step="1" value="5"
-                                        class="w-full">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs text-zinc-400" id="gridSizeValue">5 cm</span>
                                 </div>
+                                <input type="range" id="gridSizeSlider" min="1" max="2000" step="1" value="5"
+                                    class="w-full">
                             </div>
                         </div>
                     </div>
@@ -344,13 +427,15 @@
                                        shadow-sm ring-1 ring-inset ring-zinc-700 focus:ring-2 focus:ring-indigo-600 
                                        sm:text-sm sm:leading-6">
                         </div>
-                        <select id="canvasUnitSelect"
-                            class="rounded-md border-0 bg-zinc-800 py-1.5 pl-3 pr-8 text-zinc-200 
-                                   shadow-sm ring-1 ring-inset ring-zinc-700 focus:ring-2 focus:ring-indigo-600
-                                   sm:text-sm sm:leading-6">
-                            <option value="cm">cm</option>
-                            <option value="in">in</option>
-                        </select>
+                        <div class="relative group">
+                            <select id="canvasUnitSelect" class="w-16 text-xs text-zinc-400 bg-zinc-850 border border-zinc-700 rounded-md pl-2 pr-6 py-1.5 appearance-none hover:text-zinc-200 hover:border-zinc-600 focus:text-zinc-200">
+                                <option value="cm">cm</option>
+                                <option value="in">in</option>
+                            </select>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 pointer-events-none text-zinc-400 group-hover:text-zinc-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </div>
                     </div>
                 </div>
             </div>

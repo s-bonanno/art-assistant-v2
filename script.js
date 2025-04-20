@@ -4,7 +4,6 @@ const imageInput = document.getElementById('imageInput');
 const exportBtn = document.getElementById('exportBtn');
 const canvasWidthInput = document.getElementById('canvasWidth');
 const canvasHeightInput = document.getElementById('canvasHeight');
-const gridSquareSizeInput = document.getElementById('gridSquareSize');
 const unitSelect = document.getElementById('unitSelect');
 const canvasUnitSelect = document.getElementById('canvasUnitSelect');
 const gridSizeDisplay = document.getElementById('gridSizeDisplay');
@@ -20,8 +19,12 @@ const gridSizeSlider = document.getElementById('gridSizeSlider');
 const gridSizeValue = document.getElementById('gridSizeValue');
 const zoom100Btn = document.getElementById('zoom100Btn');
 
+// Add gridSquareSize input handling
+const gridSquareSizeInput = document.getElementById('gridSquareSize');
+
 const MAX_CANVAS_DIMENSION = 1000; // Maximum canvas dimension in pixels
 const EXPORT_SIZE = 2400; // Size of the exported image
+const CM_PER_INCH = 2.54; // Conversion factor for inches to centimeters
 import { convertToUnit, convertFromUnit } from './js/utils/unitConversion.js';
 import { gridConfig, updateColorSwatchSelection, setDefaultGridStyle, initGridStyleListeners } from './js/utils/gridStyle.js';
 import { filters, filterCache, applyFilters, initFilterListeners } from './js/utils/filters.js';
@@ -195,7 +198,6 @@ function setDefaultGridSize() {
             );
             config.gridSpacing = Math.max(gridSizeLimits.min, Math.min(gridSizeLimits.max, defaultGridSize));
             gridSizeSlider.value = config.gridSpacing;
-            gridSquareSizeInput.value = config.gridSpacing;
             gridSizeValue.textContent = `${config.gridSpacing} px`;
         } else {
             // Canvas mode - use canvas dimensions in cm
@@ -218,7 +220,6 @@ function setDefaultGridSize() {
             // Update UI with cm values
             config.gridSizeCm = defaultGridSizeCm;
             gridSizeSlider.value = config.gridSizeCm;
-            gridSquareSizeInput.value = config.gridSizeCm;
             gridSizeValue.textContent = `${config.gridSizeCm.toFixed(1)} cm`;
         }
     }
@@ -270,7 +271,7 @@ function updateGridSizeLimits() {
     gridSizeSlider.step = config.viewMode === 'full' ? '1' : '0.1';
     
     // Update input step
-    gridSquareSizeInput.step = config.viewMode === 'full' ? '1' : '0.1';
+    gridSizeSlider.step = config.viewMode === 'full' ? '1' : '0.1';
     
     // If current grid size is outside new limits, adjust it
     if (config.viewMode === 'full') {
@@ -280,7 +281,6 @@ function updateGridSizeLimits() {
             config.gridSpacing = gridSizeLimits.max;
         }
         gridSizeSlider.value = config.gridSpacing;
-        gridSquareSizeInput.value = config.gridSpacing;
         gridSizeValue.textContent = `${config.gridSpacing} px`;
     } else {
         const currentSizeCm = config.gridSizeCm;
@@ -290,7 +290,6 @@ function updateGridSizeLimits() {
             config.gridSizeCm = parseFloat(gridSizeLimits.max);
         }
         gridSizeSlider.value = config.gridSizeCm;
-        gridSquareSizeInput.value = config.gridSizeCm;
         gridSizeValue.textContent = `${config.gridSizeCm} cm`;
     }
 }
@@ -306,7 +305,6 @@ viewModeToggle.addEventListener('change', () => {
             const longestSide = Math.max(currentImage.naturalWidth, currentImage.naturalHeight);
             config.gridSpacing = Math.floor(longestSide / 5);
             gridSizeSlider.value = config.gridSpacing;
-            gridSquareSizeInput.value = config.gridSpacing;
             gridSizeValue.textContent = `${config.gridSpacing} px`;
             unitSelect.style.display = 'none';
         } else {
@@ -315,7 +313,6 @@ viewModeToggle.addEventListener('change', () => {
             const pixelsPerCm = config.canvasWidth / config.canvasWidthCm;
             config.gridSizeCm = (longestSide / 5) / pixelsPerCm;
             gridSizeSlider.value = config.gridSizeCm;
-            gridSquareSizeInput.value = config.gridSizeCm;
             gridSizeValue.textContent = `${config.gridSizeCm.toFixed(1)} cm`;
             unitSelect.style.display = 'block';
         }
@@ -371,11 +368,11 @@ fitToScreenBtn.addEventListener('click', fitToScreen);
 
 // Event listeners for grid controls
 gridSizeSlider.addEventListener('input', () => {
-    if (config.viewMode === 'full') {
-        gridSquareSizeInput.value = gridSizeSlider.value;
-    } else {
-        gridSquareSizeInput.value = gridSizeSlider.value;
-    }
+    gridSquareSizeInput.value = gridSizeSlider.value;
+    updateGridSpacing();
+});
+
+gridSquareSizeInput.addEventListener('change', () => {
     updateGridSpacing();
 });
 
@@ -425,13 +422,12 @@ function updateGridSpacing() {
     if (config.viewMode === 'full') {
         // In full image mode, use pixels directly
         config.gridSpacing = parseFloat(gridSizeSlider.value);
-        gridSquareSizeInput.value = config.gridSpacing;
         gridSizeValue.textContent = `${config.gridSpacing} px`;
     } else {
         // Canvas mode - existing logic
         const gridSizeInCm = unitSelect.value === 'in' ? 
-            gridSquareSizeInput.value * CM_PER_INCH : 
-            gridSquareSizeInput.value;
+            parseFloat(gridSquareSizeInput.value) * CM_PER_INCH : 
+            parseFloat(gridSquareSizeInput.value);
         
         // Calculate pixels per centimeter
         const pixelsPerCm = config.canvasWidth / config.canvasWidthCm;
@@ -439,7 +435,7 @@ function updateGridSpacing() {
         // Set grid spacing in pixels
         config.gridSpacing = gridSizeInCm * pixelsPerCm;
         
-        // Update slider value
+        // Update slider value to match input
         gridSizeSlider.value = gridSquareSizeInput.value;
         gridSizeValue.textContent = `${gridSquareSizeInput.value} ${unitSelect.value}`;
     }
@@ -465,26 +461,19 @@ canvasUnitSelect.addEventListener('change', () => {
     updateCanvasUnitDisplay();
 });
 
-gridSquareSizeInput.addEventListener('input', () => {
-    if (config.viewMode === 'full') {
-        gridSizeSlider.value = gridSquareSizeInput.value;
-    } else {
-        gridSquareSizeInput.value = gridSizeSlider.value;
-    }
-    updateGridSpacing();
-});
-
 unitSelect.addEventListener('change', () => {
     if (config.viewMode === 'canvas') {
         const currentSizeCm = config.gridSizeCm;
         
-        // Update input value based on unit
+        // Update input and slider values based on unit
         if (unitSelect.value === 'in') {
             gridSquareSizeInput.value = (currentSizeCm / CM_PER_INCH).toFixed(2);
-            gridSquareSizeInput.step = "0.25";
+            gridSizeSlider.value = gridSquareSizeInput.value;
+            gridSizeSlider.step = "0.25";
         } else {
             gridSquareSizeInput.value = currentSizeCm.toFixed(1);
-            gridSquareSizeInput.step = "0.1";
+            gridSizeSlider.value = gridSquareSizeInput.value;
+            gridSizeSlider.step = "0.1";
         }
         
         updateGridSpacing();
