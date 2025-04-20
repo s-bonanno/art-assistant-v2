@@ -765,11 +765,14 @@ function drawCanvas() {
                 // Create a temporary canvas for the image and filters
                 const tempCanvas = document.createElement('canvas');
                 const tempCtx = tempCanvas.getContext('2d');
-                tempCanvas.width = previewImage.width;
-                tempCanvas.height = previewImage.height;
+                
+                // Use original image if zoomed to 100%, otherwise use preview
+                const sourceImage = getZoom() === 1 ? currentImage : previewImage;
+                tempCanvas.width = sourceImage.width;
+                tempCanvas.height = sourceImage.height;
 
-                // Draw the preview image to temp canvas
-                tempCtx.drawImage(previewImage, 0, 0);
+                // Draw the image to temp canvas
+                tempCtx.drawImage(sourceImage, 0, 0);
 
                 // Apply filters to temp canvas
                 applyFilters(tempCtx, tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
