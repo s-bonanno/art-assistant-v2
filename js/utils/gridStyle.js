@@ -27,14 +27,15 @@ export function updateColorSwatchSelection() {
 
 // Set initial grid style values
 export function setDefaultGridStyle(viewMode) {
-    if (viewMode === 'full') {
+    // Only set defaults if no values have been set yet
+    if (gridConfig.lineWeight === undefined) {
+        gridConfig.lineWeight = viewMode === 'full' ? 1 : 0.5;
+    }
+    if (gridConfig.opacity === undefined) {
+        gridConfig.opacity = viewMode === 'full' ? 1 : 0.7;
+    }
+    if (gridConfig.color === undefined) {
         gridConfig.color = '#ffffff';
-        gridConfig.opacity = 1;
-        gridConfig.lineWeight = 1;
-    } else {
-        gridConfig.color = '#ffffff';
-        gridConfig.opacity = 0.7;
-        gridConfig.lineWeight = 0.5;
     }
     
     // Update UI elements

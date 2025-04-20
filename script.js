@@ -280,18 +280,21 @@ viewModeToggle.addEventListener('change', () => {
     zoom100Btn.style.display = config.viewMode === 'full' ? 'inline-flex' : 'none';
     resetZoomBtn.style.display = config.viewMode === 'canvas' ? 'inline-flex' : 'none';
     
-    // Set default grid style when switching modes
-    setDefaultGridStyle(config.viewMode);
-    
     // Update grid input based on mode
     if (config.viewMode === 'full') {
         // In full image mode, use pixels
         unitSelect.style.display = 'none';
         
-        // Set default grid size if an image is loaded
         if (currentImage) {
             updateGridSizeLimits();
-            setDefaultGridSize();
+            // Convert current grid size to pixels if needed
+            if (config.gridSpacing !== undefined) {
+                const pixelsPerCm = currentImage.naturalWidth / config.canvasWidthCm;
+                config.gridSpacing = config.gridSpacing * pixelsPerCm;
+                gridSizeSlider.value = config.gridSpacing;
+                gridSquareSizeInput.value = config.gridSpacing;
+                gridSizeValue.textContent = `${config.gridSpacing} px`;
+            }
             fitToScreen();
             drawCanvas();
         }
@@ -300,8 +303,16 @@ viewModeToggle.addEventListener('change', () => {
         unitSelect.style.display = 'block';
         
         if (currentImage) {
-            // Reset zoom and pan when switching to canvas mode
             updateGridSizeLimits();
+            // Convert current grid size to cm if needed
+            if (config.gridSpacing !== undefined) {
+                const cmPerPixel = config.canvasWidthCm / currentImage.naturalWidth;
+                config.gridSpacing = config.gridSpacing * cmPerPixel;
+                config.gridSizeCm = config.gridSpacing;
+                gridSizeSlider.value = config.gridSizeCm;
+                gridSquareSizeInput.value = config.gridSizeCm;
+                gridSizeValue.textContent = `${config.gridSizeCm} cm`;
+            }
             fitToCanvas();
             drawCanvas();
         }
