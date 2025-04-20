@@ -186,42 +186,43 @@ window.addEventListener('resize', () => {
 function setDefaultGridSize() {
     if (currentImage) {
         if (config.viewMode === 'full') {
-            // Full image mode - use image dimensions
+            // Full image mode - use image dimensions in pixels
             const longestSide = Math.max(currentImage.naturalWidth, currentImage.naturalHeight);
             const defaultGridSize = Math.floor(longestSide / 5);
-            // Ensure it's within our min/max limits
-            const gridSizeLimits = calculateGridSizeLimits(
-                currentImage.naturalWidth,
-                currentImage.naturalHeight,
-                config.viewMode,
-                config
-            );
-            config.gridSpacing = Math.max(gridSizeLimits.min, Math.min(gridSizeLimits.max, defaultGridSize));
-            gridSizeSlider.value = config.gridSpacing;
-            gridSizeValue.textContent = `${config.gridSpacing} px`;
+            
+            // Update config and UI
+            config.gridSpacing = defaultGridSize;
+            gridSquareSizeInput.value = defaultGridSize;
+            gridSizeSlider.value = defaultGridSize;
+            gridSizeValue.textContent = `${defaultGridSize} px`;
+            
+            // Hide unit select in full image mode as we're using pixels
+            unitSelect.style.display = 'none';
         } else {
             // Canvas mode - use canvas dimensions in cm
             const longestSideCm = Math.max(config.canvasWidthCm, config.canvasHeightCm);
             const defaultGridSizeCm = longestSideCm / 5;
             
-            // Convert to pixels
-            const pixelsPerCm = config.canvasWidth / config.canvasWidthCm;
-            const defaultGridSize = Math.floor(defaultGridSizeCm * pixelsPerCm);
-            
-            // Ensure it's within our min/max limits
-            const gridSizeLimits = calculateGridSizeLimits(
-                config.canvasWidth,
-                config.canvasHeight,
-                config.viewMode,
-                config
-            );
-            config.gridSpacing = Math.max(gridSizeLimits.min, Math.min(gridSizeLimits.max, defaultGridSize));
-            
-            // Update UI with cm values
+            // Update config and UI
             config.gridSizeCm = defaultGridSizeCm;
-            gridSizeSlider.value = config.gridSizeCm;
-            gridSizeValue.textContent = `${config.gridSizeCm.toFixed(1)} cm`;
+            gridSquareSizeInput.value = defaultGridSizeCm.toFixed(1);
+            gridSizeSlider.value = defaultGridSizeCm;
+            
+            // Show and update unit select in canvas mode
+            unitSelect.style.display = 'block';
+            const unit = unitSelect.value;
+            const displayValue = unit === 'in' ? 
+                (defaultGridSizeCm / CM_PER_INCH).toFixed(2) : 
+                defaultGridSizeCm.toFixed(1);
+            gridSizeValue.textContent = `${displayValue} ${unit}`;
+            
+            // Calculate pixels per cm for grid spacing
+            const pixelsPerCm = config.canvasWidth / config.canvasWidthCm;
+            config.gridSpacing = defaultGridSizeCm * pixelsPerCm;
         }
+        
+        // Update grid size limits for the current mode
+        updateGridSizeLimits();
     }
 }
 
@@ -352,7 +353,7 @@ imageInput.addEventListener('change', (e) => {
                 filterCache.needsUpdate = true;
                 
                 // Set default grid style when loading new image
-                setDefaultGridSize();
+                setDefaultGridStyle(config.viewMode);
                 
                 // Set default grid size based on image dimensions
                 setDefaultGridSize();
@@ -844,6 +845,10 @@ function updateViewMode(showAll) {
     
     // Update canvas if we have an image
     if (currentImage) {
+        // Set default grid size for the new mode
+        setDefaultGridSize();
+        
+        // Update grid size limits and fit to view
         updateGridSizeLimits();
         if (showAll) {
             fitToScreen();
