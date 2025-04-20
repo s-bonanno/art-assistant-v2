@@ -18,8 +18,6 @@ const viewModeToggle = document.getElementById('viewModeToggle');
 const fitToScreenBtn = document.getElementById('fitToScreenBtn');
 const gridSizeSlider = document.getElementById('gridSizeSlider');
 const gridSizeValue = document.getElementById('gridSizeValue');
-const gridSizeDecreaseBtn = document.getElementById('gridSizeDecreaseBtn');
-const gridSizeIncreaseBtn = document.getElementById('gridSizeIncreaseBtn');
 const zoom100Btn = document.getElementById('zoom100Btn');
 
 const MAX_CANVAS_DIMENSION = 1000; // Maximum canvas dimension in pixels
@@ -55,11 +53,9 @@ function switchTab(tabName) {
     // Update tab buttons
     tabButtons.forEach(button => {
         if (button.dataset.tab === tabName) {
-            button.classList.add('border-indigo-500', 'text-zinc-200');
-            button.classList.remove('border-transparent', 'text-zinc-400');
+            button.classList.add('active');
         } else {
-            button.classList.remove('border-indigo-500', 'text-zinc-200');
-            button.classList.add('border-transparent', 'text-zinc-400');
+            button.classList.remove('active');
         }
     });
 
@@ -383,20 +379,6 @@ gridSizeSlider.addEventListener('input', () => {
     updateGridSpacing();
 });
 
-gridSizeDecreaseBtn.addEventListener('click', () => {
-    const currentValue = parseFloat(gridSizeSlider.value);
-    const step = config.viewMode === 'full' ? 1 : 0.1;
-    gridSizeSlider.value = Math.max(parseFloat(gridSizeSlider.min), currentValue - step);
-    updateGridSpacing();
-});
-
-gridSizeIncreaseBtn.addEventListener('click', () => {
-    const currentValue = parseFloat(gridSizeSlider.value);
-    const step = config.viewMode === 'full' ? 1 : 0.1;
-    gridSizeSlider.value = Math.min(parseFloat(gridSizeSlider.max), currentValue + step);
-    updateGridSpacing();
-});
-
 // Update image upload handler
 imageInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -483,16 +465,11 @@ canvasUnitSelect.addEventListener('change', () => {
     updateCanvasUnitDisplay();
 });
 
-gridSquareSizeInput.addEventListener('change', () => {
+gridSquareSizeInput.addEventListener('input', () => {
     if (config.viewMode === 'full') {
-        config.gridSpacing = parseFloat(gridSquareSizeInput.value);
-        gridSizeSlider.value = config.gridSpacing;
-    } else {
-        config.gridSizeCm = parseFloat(gridSquareSizeInput.value);
-        if (unitSelect.value === 'in') {
-            config.gridSizeCm *= CM_PER_INCH;
-        }
         gridSizeSlider.value = gridSquareSizeInput.value;
+    } else {
+        gridSquareSizeInput.value = gridSizeSlider.value;
     }
     updateGridSpacing();
 });
@@ -843,27 +820,33 @@ function drawCanvas() {
             ctx.beginPath();
             ctx.strokeStyle = gridConfig.color;
             ctx.globalAlpha = gridConfig.opacity;
-            // Scale line width to match export appearance
+            
+            // Calculate preview scale based on current canvas size vs export size
             const previewScale = config.canvasWidth / EXPORT_SIZE;
-            ctx.lineWidth = gridConfig.lineWeight * previewScale;
+            // Apply line width scaling consistently
+            ctx.lineWidth = Math.max(0.5, gridConfig.lineWeight * previewScale);
             
             const gridSpacing = config.gridSpacing;
             const numVerticalLines = Math.ceil(config.canvasWidth / gridSpacing) + 1;
             const numHorizontalLines = Math.ceil(config.canvasHeight / gridSpacing) + 1;
             
+            // Ensure lines are drawn on pixel boundaries for crisp rendering
+            ctx.translate(0.5, 0.5);
+            
             for (let i = 0; i < numVerticalLines; i++) {
                 const x = Math.floor(i * gridSpacing);
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, config.canvasHeight);
+                ctx.moveTo(x, -0.5);
+                ctx.lineTo(x, config.canvasHeight - 0.5);
             }
             
             for (let i = 0; i < numHorizontalLines; i++) {
                 const y = Math.floor(i * gridSpacing);
-                ctx.moveTo(0, y);
-                ctx.lineTo(config.canvasWidth, y);
+                ctx.moveTo(-0.5, y);
+                ctx.lineTo(config.canvasWidth - 0.5, y);
             }
             
             ctx.stroke();
+            ctx.translate(-0.5, -0.5);
         }
     }
     
@@ -874,6 +857,8 @@ function drawCanvas() {
 updateCanvasUnitDisplay();
 // Set initial grid spacing to 5px in full mode
 config.gridSpacing = 5;
+// Set default grid style for initial render
+setDefaultGridStyle(config.viewMode);
 updateGridSpacing();
 updateCanvasSize();
 

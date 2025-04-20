@@ -19,6 +19,155 @@
             },
         }
     </script>
+    <style>
+        /* Lightroom-style slider styling */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            cursor: pointer;
+            width: 100%;
+            position: relative;
+        }
+
+        /* Track styling */
+        input[type="range"]::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+
+        /* Slider handle */
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            background: #fff;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            position: relative;
+            z-index: 1;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 12px;
+            height: 12px;
+            background: #fff;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Hover state */
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        input[type="range"]::-moz-range-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        /* Active state */
+        input[type="range"]:active::-webkit-slider-thumb {
+            transform: scale(0.9);
+            background: #fff;
+        }
+
+        input[type="range"]:active::-moz-range-thumb {
+            transform: scale(0.9);
+            background: #fff;
+        }
+
+        /* Remove default track */
+        input[type="range"]::-webkit-slider-runnable-track {
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            border: none;
+        }
+
+        input[type="range"]::-moz-range-track {
+            background: transparent;
+            border: none;
+        }
+
+        /* Value label styling */
+        .slider-value {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+            min-width: 3.5rem;
+            text-align: right;
+        }
+
+        /* Slider group styling */
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.5rem 0;
+            min-height: 32px;
+        }
+
+        .slider-label {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.8);
+            min-width: 6rem;
+        }
+
+        /* Tab styling */
+        .tab-group {
+            display: flex;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin: 0 -1rem;
+            padding: 0 1rem;
+        }
+
+        .tab-button {
+            position: relative;
+            padding: 0.75rem 0;
+            margin-right: 2rem;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.4);
+            transition: color 0.2s ease;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+        }
+
+        .tab-button::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: transparent;
+            transition: background-color 0.2s ease;
+        }
+
+        .tab-button.active {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .tab-button.active::after {
+            background: rgb(99, 102, 241);
+        }
+
+        .tab-button:hover:not(.active) {
+            color: rgba(255, 255, 255, 0.6);
+        }
+    </style>
 </head>
 <body class="h-full overflow-hidden bg-zinc-900">
     <!-- Main container -->
@@ -84,75 +233,74 @@
             <!-- Grid settings panel -->
             <div class="hidden bg-zinc-850 border-t border-zinc-800 p-4 space-y-4" id="gridPanel">
                 <!-- Tab Navigation -->
-                <div class="flex border-b border-zinc-800 -mx-4 -mt-4">
-                    <button class="flex-1 px-4 py-2 text-sm font-medium text-zinc-400 hover:text-zinc-200 border-b-2 border-transparent" data-tab="size">
-                        Size
-                    </button>
-                    <button class="flex-1 px-4 py-2 text-sm font-medium text-zinc-400 hover:text-zinc-200 border-b-2 border-transparent" data-tab="style">
-                        Style
-                    </button>
-                    <button class="flex-1 px-4 py-2 text-sm font-medium text-zinc-400 hover:text-zinc-200 border-b-2 border-transparent" data-tab="type">
-                        Type
-                    </button>
+                <div class="tab-group">
+                    <button class="tab-button active" data-tab="size">Size</button>
+                    <button class="tab-button" data-tab="style">Style</button>
+                    <button class="tab-button" data-tab="type">Type</button>
                 </div>
 
                 <!-- Tab Content Container -->
-                <div class="relative min-h-[120px]">
+                <div class="relative min-h-[120px] pt-2">
                     <!-- Size Tab -->
-                    <div class="absolute inset-0" data-tab-content="size">
+                    <div class="absolute inset-0 pt-2" data-tab-content="size">
                         <div class="space-y-4">
-                            <div class="flex items-center gap-3">
-                                <input type="number" id="gridSquareSize" value="5" min="0.1" step="0.1"
-                                    class="block w-20 rounded-md border-0 bg-zinc-800 py-1.5 px-3 text-zinc-200 
-                                           shadow-sm ring-1 ring-inset ring-zinc-700 focus:ring-2 focus:ring-indigo-600 
-                                           sm:text-sm sm:leading-6">
-                                <select id="unitSelect"
-                                    class="rounded-md border-0 bg-zinc-800 py-1.5 pl-3 pr-8 text-zinc-200 
-                                           shadow-sm ring-1 ring-inset ring-zinc-700 focus:ring-2 focus:ring-indigo-600
-                                           sm:text-sm sm:leading-6">
-                                    <option value="cm">cm</option>
-                                    <option value="in">in</option>
-                                </select>
-                            </div>
-                            <div class="flex items-center gap-3">
-                                <button id="gridSizeDecreaseBtn" class="p-1 rounded-md text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/75">
-                                    <i data-lucide="minus" class="w-4 h-4"></i>
-                                </button>
-                                <input type="range" id="gridSizeSlider" min="1" max="2000" step="1" value="5"
-                                    class="flex-1 h-2 rounded-lg appearance-none cursor-pointer bg-zinc-700">
-                                <button id="gridSizeIncreaseBtn" class="p-1 rounded-md text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/75">
-                                    <i data-lucide="plus" class="w-4 h-4"></i>
-                                </button>
-                            </div>
-                            <div class="text-xs text-zinc-400" id="gridSizeLabel">
-                                Grid size: <span id="gridSizeValue">5 cm</span>
+                            <!-- Grid Size Input -->
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs text-zinc-400">Grid Size</span>
+                                    <div class="flex items-center gap-2">
+                                        <input type="number" id="gridSquareSize" value="5" min="0.1" step="0.1"
+                                            class="block w-20 rounded-md border-0 bg-zinc-800 py-1.5 px-3 text-zinc-200 
+                                                   shadow-sm ring-1 ring-inset ring-zinc-700 focus:ring-2 focus:ring-indigo-600 
+                                                   sm:text-sm sm:leading-6">
+                                        <select id="unitSelect"
+                                            class="rounded-md border-0 bg-zinc-800 py-1.5 pl-3 pr-8 text-zinc-200 
+                                                   shadow-sm ring-1 ring-inset ring-zinc-700 focus:ring-2 focus:ring-indigo-600
+                                                   sm:text-sm sm:leading-6">
+                                            <option value="cm">cm</option>
+                                            <option value="in">in</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="space-y-2">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs text-zinc-400">Size</span>
+                                        <span class="text-xs text-zinc-400" id="gridSizeValue">5 cm</span>
+                                    </div>
+                                    <input type="range" id="gridSizeSlider" min="1" max="2000" step="1" value="5"
+                                        class="w-full">
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Style Tab -->
                     <div class="absolute inset-0 hidden" data-tab-content="style">
-                        <div class="space-y-2">
+                        <div class="space-y-4">
                             <!-- Line Weight -->
-                            <div class="flex items-center gap-3">
-                                <span class="text-xs text-zinc-400 w-20">Line Weight</span>
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs text-zinc-400">Line Weight</span>
+                                    <span class="text-xs text-zinc-400" id="gridLineWeightValue">1px</span>
+                                </div>
                                 <input type="range" id="gridLineWeight" min="0.5" max="5" step="0.5" value="1"
-                                    class="flex-1 h-2 rounded-lg appearance-none cursor-pointer bg-zinc-700">
-                                <span class="text-xs text-zinc-400 w-12 text-right" id="gridLineWeightValue">1px</span>
+                                    class="w-full">
                             </div>
 
                             <!-- Opacity -->
-                            <div class="flex items-center gap-3">
-                                <span class="text-xs text-zinc-400 w-20">Opacity</span>
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs text-zinc-400">Opacity</span>
+                                    <span class="text-xs text-zinc-400" id="gridOpacityValue">50%</span>
+                                </div>
                                 <input type="range" id="gridOpacity" min="0" max="1" step="0.1" value="0.5"
-                                    class="flex-1 h-2 rounded-lg appearance-none cursor-pointer bg-zinc-700">
-                                <span class="text-xs text-zinc-400 w-12 text-right" id="gridOpacityValue">50%</span>
+                                    class="w-full">
                             </div>
 
                             <!-- Color Swatches -->
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs text-zinc-400 w-20">Color</span>
-                                <div class="flex-1 flex gap-2">
+                            <div class="space-y-2">
+                                <span class="text-xs text-zinc-400">Color</span>
+                                <div class="flex gap-2">
                                     <button class="w-6 h-6 rounded-full bg-white border-2 border-zinc-700 hover:border-zinc-500" data-color="#ffffff"></button>
                                     <button class="w-6 h-6 rounded-full bg-black border-2 border-zinc-700 hover:border-zinc-500" data-color="#000000"></button>
                                     <button class="w-6 h-6 rounded-full bg-zinc-500 border-2 border-zinc-700 hover:border-zinc-500" data-color="#71717a"></button>
@@ -222,59 +370,43 @@
                     </div>
                     <div class="space-y-3" id="lightSectionContent">
                         <!-- Exposure -->
-                        <div class="space-y-1">
+                        <div class="space-y-2">
                             <div class="flex items-center justify-between">
                                 <span class="text-xs text-zinc-400">Exposure</span>
                                 <span class="text-xs text-zinc-400" id="exposureValue">0</span>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <i data-lucide="minus" class="w-4 h-4 text-zinc-400"></i>
-                                <input type="range" id="exposure" min="-100" max="100" step="1" value="0"
-                                    class="flex-1 h-1 rounded-lg appearance-none cursor-pointer bg-zinc-700">
-                                <i data-lucide="plus" class="w-4 h-4 text-zinc-400"></i>
-                            </div>
+                            <input type="range" id="exposure" min="-100" max="100" step="1" value="0"
+                                class="w-full">
                         </div>
                         
                         <!-- Contrast -->
-                        <div class="space-y-1">
+                        <div class="space-y-2">
                             <div class="flex items-center justify-between">
                                 <span class="text-xs text-zinc-400">Contrast</span>
                                 <span class="text-xs text-zinc-400" id="contrastValue">0</span>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <i data-lucide="minus" class="w-4 h-4 text-zinc-400"></i>
-                                <input type="range" id="contrast" min="-100" max="100" step="1" value="0"
-                                    class="flex-1 h-1 rounded-lg appearance-none cursor-pointer bg-zinc-700">
-                                <i data-lucide="plus" class="w-4 h-4 text-zinc-400"></i>
-                            </div>
+                            <input type="range" id="contrast" min="-100" max="100" step="1" value="0"
+                                class="w-full">
                         </div>
                         
                         <!-- Highlights -->
-                        <div class="space-y-1">
+                        <div class="space-y-2">
                             <div class="flex items-center justify-between">
                                 <span class="text-xs text-zinc-400">Highlights</span>
                                 <span class="text-xs text-zinc-400" id="highlightsValue">0</span>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <i data-lucide="minus" class="w-4 h-4 text-zinc-400"></i>
-                                <input type="range" id="highlights" min="-100" max="100" step="1" value="0"
-                                    class="flex-1 h-1 rounded-lg appearance-none cursor-pointer bg-zinc-700">
-                                <i data-lucide="plus" class="w-4 h-4 text-zinc-400"></i>
-                            </div>
+                            <input type="range" id="highlights" min="-100" max="100" step="1" value="0"
+                                class="w-full">
                         </div>
                         
                         <!-- Shadows -->
-                        <div class="space-y-1">
+                        <div class="space-y-2">
                             <div class="flex items-center justify-between">
                                 <span class="text-xs text-zinc-400">Shadows</span>
                                 <span class="text-xs text-zinc-400" id="shadowsValue">0</span>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <i data-lucide="minus" class="w-4 h-4 text-zinc-400"></i>
-                                <input type="range" id="shadows" min="-100" max="100" step="1" value="0"
-                                    class="flex-1 h-1 rounded-lg appearance-none cursor-pointer bg-zinc-700">
-                                <i data-lucide="plus" class="w-4 h-4 text-zinc-400"></i>
-                            </div>
+                            <input type="range" id="shadows" min="-100" max="100" step="1" value="0"
+                                class="w-full">
                         </div>
                     </div>
                 </div>
@@ -288,11 +420,13 @@
                             <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:bg-white peer-checked:bg-indigo-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                         </label>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <span class="text-xs text-zinc-400 w-20">Levels</span>
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-zinc-400">Levels</span>
+                            <span class="text-xs text-zinc-400" id="posteriseLevelsValue">4</span>
+                        </div>
                         <input type="range" id="posteriseLevels" min="2" max="10" step="1" value="4"
-                            class="flex-1 h-2 rounded-lg appearance-none cursor-pointer bg-zinc-700">
-                        <span class="text-xs text-zinc-400 w-12 text-right" id="posteriseLevelsValue">4</span>
+                            class="w-full">
                     </div>
                 </div>
 
@@ -305,17 +439,21 @@
                             <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:bg-white peer-checked:bg-indigo-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                         </label>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <span class="text-xs text-zinc-400 w-20">Strength</span>
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-zinc-400">Strength</span>
+                            <span class="text-xs text-zinc-400" id="edgesStrengthValue">2</span>
+                        </div>
                         <input type="range" id="edgesStrength" min="0" max="5" step="0.1" value="2"
-                            class="flex-1 h-2 rounded-lg appearance-none cursor-pointer bg-zinc-700">
-                        <span class="text-xs text-zinc-400 w-12 text-right" id="edgesStrengthValue">2</span>
+                            class="w-full">
                     </div>
-                    <div class="flex items-center gap-3">
-                        <span class="text-xs text-zinc-400 w-20">Opacity</span>
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-zinc-400">Opacity</span>
+                            <span class="text-xs text-zinc-400" id="edgesOpacityValue">100%</span>
+                        </div>
                         <input type="range" id="edgesOpacity" min="0" max="1" step="0.1" value="1"
-                            class="flex-1 h-2 rounded-lg appearance-none cursor-pointer bg-zinc-700">
-                        <span class="text-xs text-zinc-400 w-12 text-right" id="edgesOpacityValue">100%</span>
+                            class="w-full">
                     </div>
                 </div>
 
@@ -328,17 +466,21 @@
                             <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:bg-white peer-checked:bg-indigo-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                         </label>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <span class="text-xs text-zinc-400 w-20">Shadows</span>
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-zinc-400">Shadows</span>
+                            <span class="text-xs text-zinc-400" id="shadowThresholdValue">30%</span>
+                        </div>
                         <input type="range" id="shadowThreshold" min="0" max="50" step="1" value="30"
-                            class="flex-1 h-2 rounded-lg appearance-none cursor-pointer bg-zinc-700">
-                        <span class="text-xs text-zinc-400 w-12 text-right" id="shadowThresholdValue">30%</span>
+                            class="w-full">
                     </div>
-                    <div class="flex items-center gap-3">
-                        <span class="text-xs text-zinc-400 w-20">Highlights</span>
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-zinc-400">Highlights</span>
+                            <span class="text-xs text-zinc-400" id="highlightThresholdValue">70%</span>
+                        </div>
                         <input type="range" id="highlightThreshold" min="50" max="100" step="1" value="70"
-                            class="flex-1 h-2 rounded-lg appearance-none cursor-pointer bg-zinc-700">
-                        <span class="text-xs text-zinc-400 w-12 text-right" id="highlightThresholdValue">70%</span>
+                            class="w-full">
                     </div>
                 </div>
             </div>
