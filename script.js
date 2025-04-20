@@ -185,20 +185,46 @@ window.addEventListener('resize', () => {
 });
 
 function setDefaultGridSize() {
-    if (config.viewMode === 'full' && currentImage) {
-        // Set grid size to image width / 5
-        const defaultGridSize = Math.floor(currentImage.naturalWidth / 5);
-        // Ensure it's within our min/max limits
-        const gridSizeLimits = calculateGridSizeLimits(
-            currentImage.naturalWidth,
-            currentImage.naturalHeight,
-            config.viewMode,
-            config
-        );
-        config.gridSpacing = Math.max(gridSizeLimits.min, Math.min(gridSizeLimits.max, defaultGridSize));
-        gridSizeSlider.value = config.gridSpacing;
-        gridSquareSizeInput.value = config.gridSpacing;
-        gridSizeValue.textContent = `${config.gridSpacing} px`;
+    if (currentImage) {
+        if (config.viewMode === 'full') {
+            // Full image mode - use image dimensions
+            const longestSide = Math.max(currentImage.naturalWidth, currentImage.naturalHeight);
+            const defaultGridSize = Math.floor(longestSide / 5);
+            // Ensure it's within our min/max limits
+            const gridSizeLimits = calculateGridSizeLimits(
+                currentImage.naturalWidth,
+                currentImage.naturalHeight,
+                config.viewMode,
+                config
+            );
+            config.gridSpacing = Math.max(gridSizeLimits.min, Math.min(gridSizeLimits.max, defaultGridSize));
+            gridSizeSlider.value = config.gridSpacing;
+            gridSquareSizeInput.value = config.gridSpacing;
+            gridSizeValue.textContent = `${config.gridSpacing} px`;
+        } else {
+            // Canvas mode - use canvas dimensions in cm
+            const longestSideCm = Math.max(config.canvasWidthCm, config.canvasHeightCm);
+            const defaultGridSizeCm = longestSideCm / 5;
+            
+            // Convert to pixels
+            const pixelsPerCm = config.canvasWidth / config.canvasWidthCm;
+            const defaultGridSize = Math.floor(defaultGridSizeCm * pixelsPerCm);
+            
+            // Ensure it's within our min/max limits
+            const gridSizeLimits = calculateGridSizeLimits(
+                config.canvasWidth,
+                config.canvasHeight,
+                config.viewMode,
+                config
+            );
+            config.gridSpacing = Math.max(gridSizeLimits.min, Math.min(gridSizeLimits.max, defaultGridSize));
+            
+            // Update UI with cm values
+            config.gridSizeCm = defaultGridSizeCm;
+            gridSizeSlider.value = config.gridSizeCm;
+            gridSquareSizeInput.value = config.gridSizeCm;
+            gridSizeValue.textContent = `${config.gridSizeCm.toFixed(1)} cm`;
+        }
     }
 }
 
@@ -387,19 +413,25 @@ imageInput.addEventListener('change', (e) => {
                 config.imageOffsetXPercent = 0;
                 config.imageOffsetYPercent = 0;
                 filterCache.needsUpdate = true;
-                resizeCanvasToFit();
                 
                 // Set default grid style when loading new image
-                setDefaultGridStyle(config.viewMode);
-                drawCanvas();
+                setDefaultGridSize();
                 
-                // Update grid size limits and set default grid size
+                // Set default grid size based on image dimensions
+                setDefaultGridSize();
+                
+                // Update grid size limits
                 updateGridSizeLimits();
                 
-                // If in full image mode, fit to screen
+                // Resize and fit to screen
+                resizeCanvasToFit();
                 if (config.viewMode === 'full') {
                     fitToScreen();
+                } else {
+                    fitToCanvas();
                 }
+                
+                drawCanvas();
             };
             img.src = event.target.result;
         };
