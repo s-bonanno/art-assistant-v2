@@ -738,9 +738,7 @@ function drawCanvas() {
             tempCtx.drawImage(currentImage, 0, 0);
 
             // Apply filters to temp canvas
-            if (Object.values(filters).some(f => f.enabled)) {
-                applyFilters(tempCtx, tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
-            }
+            applyFilters(tempCtx, tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
 
             // Draw the filtered image to the main canvas
             ctx.drawImage(tempCanvas, 0, 0);
@@ -797,9 +795,7 @@ function drawCanvas() {
             tempCtx.drawImage(currentImage, 0, 0, finalWidth, finalHeight);
 
             // Apply filters to temp canvas
-            if (Object.values(filters).some(f => f.enabled)) {
-                applyFilters(tempCtx, tempCanvas, 0, 0, finalWidth, finalHeight);
-            }
+            applyFilters(tempCtx, tempCanvas, 0, 0, finalWidth, finalHeight);
 
             // Draw the filtered image to the main canvas at the correct position
             ctx.drawImage(tempCanvas, x, y);

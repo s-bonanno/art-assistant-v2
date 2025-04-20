@@ -209,6 +209,76 @@
 
             <!-- Filters panel -->
             <div class="hidden bg-zinc-850 border-t border-zinc-800 p-4 space-y-4" id="filtersPanel">
+                <!-- Light Section -->
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="sun" class="w-4 h-4 text-zinc-400"></i>
+                            <h3 class="text-sm font-medium text-zinc-200">Light</h3>
+                        </div>
+                        <button class="text-zinc-400 hover:text-zinc-200" id="lightSectionToggle">
+                            <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    <div class="space-y-3" id="lightSectionContent">
+                        <!-- Exposure -->
+                        <div class="space-y-1">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-zinc-400">Exposure</span>
+                                <span class="text-xs text-zinc-400" id="exposureValue">0</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="minus" class="w-4 h-4 text-zinc-400"></i>
+                                <input type="range" id="exposure" min="-100" max="100" step="1" value="0"
+                                    class="flex-1 h-1 rounded-lg appearance-none cursor-pointer bg-zinc-700">
+                                <i data-lucide="plus" class="w-4 h-4 text-zinc-400"></i>
+                            </div>
+                        </div>
+                        
+                        <!-- Contrast -->
+                        <div class="space-y-1">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-zinc-400">Contrast</span>
+                                <span class="text-xs text-zinc-400" id="contrastValue">0</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="minus" class="w-4 h-4 text-zinc-400"></i>
+                                <input type="range" id="contrast" min="-100" max="100" step="1" value="0"
+                                    class="flex-1 h-1 rounded-lg appearance-none cursor-pointer bg-zinc-700">
+                                <i data-lucide="plus" class="w-4 h-4 text-zinc-400"></i>
+                            </div>
+                        </div>
+                        
+                        <!-- Highlights -->
+                        <div class="space-y-1">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-zinc-400">Highlights</span>
+                                <span class="text-xs text-zinc-400" id="highlightsValue">0</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="minus" class="w-4 h-4 text-zinc-400"></i>
+                                <input type="range" id="highlights" min="-100" max="100" step="1" value="0"
+                                    class="flex-1 h-1 rounded-lg appearance-none cursor-pointer bg-zinc-700">
+                                <i data-lucide="plus" class="w-4 h-4 text-zinc-400"></i>
+                            </div>
+                        </div>
+                        
+                        <!-- Shadows -->
+                        <div class="space-y-1">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-zinc-400">Shadows</span>
+                                <span class="text-xs text-zinc-400" id="shadowsValue">0</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="minus" class="w-4 h-4 text-zinc-400"></i>
+                                <input type="range" id="shadows" min="-100" max="100" step="1" value="0"
+                                    class="flex-1 h-1 rounded-lg appearance-none cursor-pointer bg-zinc-700">
+                                <i data-lucide="plus" class="w-4 h-4 text-zinc-400"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Posterise Filter -->
                 <div class="space-y-2">
                     <div class="flex items-center justify-between">
