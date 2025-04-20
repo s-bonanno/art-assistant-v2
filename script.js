@@ -196,8 +196,16 @@ function setDefaultGridSize() {
             gridSizeSlider.value = defaultGridSize;
             gridSizeValue.textContent = `${defaultGridSize} px`;
             
-            // Hide unit select in full image mode as we're using pixels
-            unitSelect.style.display = 'none';
+            // Set unit to px in full image mode and disable selector
+            unitSelect.value = 'px';
+            unitSelect.disabled = true;
+            
+            // Update unit options for full image mode
+            const pxOption = document.createElement('option');
+            pxOption.value = 'px';
+            pxOption.textContent = 'px';
+            unitSelect.innerHTML = '';
+            unitSelect.appendChild(pxOption);
         } else {
             // Canvas mode - use canvas dimensions in cm
             const longestSideCm = Math.max(config.canvasWidthCm, config.canvasHeightCm);
@@ -208,8 +216,18 @@ function setDefaultGridSize() {
             gridSquareSizeInput.value = defaultGridSizeCm.toFixed(1);
             gridSizeSlider.value = defaultGridSizeCm;
             
-            // Show and update unit select in canvas mode
-            unitSelect.style.display = 'block';
+            // Enable unit selector and update options for canvas mode
+            unitSelect.disabled = false;
+            unitSelect.innerHTML = `
+                <option value="cm">cm</option>
+                <option value="in">in</option>
+            `;
+            
+            // Set default unit to cm if not already set
+            if (unitSelect.value !== 'cm' && unitSelect.value !== 'in') {
+                unitSelect.value = 'cm';
+            }
+            
             const unit = unitSelect.value;
             const displayValue = unit === 'in' ? 
                 (defaultGridSizeCm / CM_PER_INCH).toFixed(2) : 
@@ -382,6 +400,7 @@ function updateGridSpacing() {
         // In full image mode, use pixels directly
         config.gridSpacing = parseFloat(gridSizeSlider.value);
         gridSizeValue.textContent = `${config.gridSpacing} px`;
+        unitSelect.value = 'px';
     } else {
         // Canvas mode - existing logic
         const gridSizeInCm = unitSelect.value === 'in' ? 
@@ -421,7 +440,12 @@ canvasUnitSelect.addEventListener('change', () => {
 });
 
 unitSelect.addEventListener('change', () => {
-    if (config.viewMode === 'canvas') {
+    if (config.viewMode === 'full') {
+        // In full image mode, force px unit
+        unitSelect.value = 'px';
+        updateGridSpacing();
+    } else {
+        // Canvas mode - existing logic
         const currentSizeCm = config.gridSizeCm;
         
         // Update input and slider values based on unit
