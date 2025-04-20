@@ -146,8 +146,8 @@ export function initZoomPanListeners(canvas, currentImage, drawCanvas) {
     canvas.addEventListener('mousemove', (e) => {
         if (!isDragging) return;
         
-        const deltaX = e.offsetX - lastMouseX;
-        const deltaY = e.offsetY - lastMouseY;
+        const deltaX = (e.offsetX - lastMouseX) / _zoom;
+        const deltaY = (e.offsetY - lastMouseY) / _zoom;
         
         _panX += deltaX;
         _panY += deltaY;
