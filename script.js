@@ -353,7 +353,35 @@ gridSquareSizeInput.addEventListener('change', () => {
     updateGridSpacing();
 });
 
-// Update image upload handler
+// Add these at the top with other constants
+const MAX_PREVIEW_DIMENSION = 2000; // Maximum dimension for preview image
+let previewImage = null;
+
+// Add this function to create a preview version of the image
+function createPreviewImage(image) {
+    const previewCanvas = document.createElement('canvas');
+    const previewCtx = previewCanvas.getContext('2d');
+    
+    // Calculate dimensions to maintain aspect ratio
+    let width = image.naturalWidth;
+    let height = image.naturalHeight;
+    
+    if (width > MAX_PREVIEW_DIMENSION || height > MAX_PREVIEW_DIMENSION) {
+        const scale = Math.min(MAX_PREVIEW_DIMENSION / width, MAX_PREVIEW_DIMENSION / height);
+        width *= scale;
+        height *= scale;
+    }
+    
+    previewCanvas.width = width;
+    previewCanvas.height = height;
+    
+    // Draw the image at the new size
+    previewCtx.drawImage(image, 0, 0, width, height);
+    
+    return previewCanvas;
+}
+
+// Modify the image upload handler
 imageInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -362,6 +390,8 @@ imageInput.addEventListener('change', (e) => {
             const img = new Image();
             img.onload = () => {
                 currentImage = img;
+                // Create preview version
+                previewImage = createPreviewImage(img);
                 // Reset transform when loading new image
                 setZoom(1);
                 setPanX(0);
@@ -699,7 +729,7 @@ exportBtn.addEventListener('click', () => {
     link.click();
 });
 
-// Modify the drawCanvas function to include filter processing
+// Modify the drawCanvas function to use preview image and cached filters
 function drawCanvas() {
     // Clear canvas with dark background
     ctx.fillStyle = '#2c2c2e';
@@ -728,20 +758,30 @@ function drawCanvas() {
             ctx.translate(getPanX(), getPanY());
             ctx.translate(-currentImage.naturalWidth / 2, -currentImage.naturalHeight / 2);
             
-            // Create a temporary canvas for the image and filters
-            const tempCanvas = document.createElement('canvas');
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCanvas.width = currentImage.naturalWidth;
-            tempCanvas.height = currentImage.naturalHeight;
+            // Check if we need to update the filter cache
+            if (filterCache.needsUpdate || !filterCache.image || 
+                JSON.stringify(filters) !== JSON.stringify(filterCache.filters)) {
+                
+                // Create a temporary canvas for the image and filters
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCanvas.width = previewImage.width;
+                tempCanvas.height = previewImage.height;
 
-            // Draw the image to temp canvas
-            tempCtx.drawImage(currentImage, 0, 0);
+                // Draw the preview image to temp canvas
+                tempCtx.drawImage(previewImage, 0, 0);
 
-            // Apply filters to temp canvas
-            applyFilters(tempCtx, tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
+                // Apply filters to temp canvas
+                applyFilters(tempCtx, tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
 
-            // Draw the filtered image to the main canvas
-            ctx.drawImage(tempCanvas, 0, 0);
+                // Cache the filtered result
+                filterCache.image = tempCanvas;
+                filterCache.filters = JSON.parse(JSON.stringify(filters));
+                filterCache.needsUpdate = false;
+            }
+
+            // Draw the cached filtered image to the main canvas
+            ctx.drawImage(filterCache.image, 0, 0, currentImage.naturalWidth, currentImage.naturalHeight);
             
             // Draw grid
             ctx.beginPath();
@@ -906,4 +946,13 @@ document.addEventListener('DOMContentLoaded', () => {
         cropToCanvasBtn.addEventListener('click', () => updateViewMode(false));
         updateViewMode(false); // Initialize with Crop to Canvas mode
     }
+});
+
+// Add event listeners for filter changes
+const filterInputs = document.querySelectorAll('#filtersPanel input[type="range"], #filtersPanel input[type="checkbox"]');
+filterInputs.forEach(input => {
+    input.addEventListener('change', () => {
+        filterCache.needsUpdate = true;
+        drawCanvas();
+    });
 }); 
