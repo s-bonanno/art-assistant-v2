@@ -1,7 +1,7 @@
 // Grid styling configuration
 export const gridConfig = {
-    lineWeight: 1, // Default for canvas mode
-    opacity: 1,
+    lineWeight: undefined, // Will be set based on view mode
+    opacity: undefined, // Will be set based on view mode
     color: '#ffffff'
 };
 
@@ -27,13 +27,9 @@ export function updateColorSwatchSelection() {
 
 // Set initial grid style values
 export function setDefaultGridStyle(viewMode) {
-    // Only set defaults if no values have been set yet
-    if (gridConfig.lineWeight === undefined) {
-        gridConfig.lineWeight = viewMode === 'full' ? 1 : 0.5;
-    }
-    if (gridConfig.opacity === undefined) {
-        gridConfig.opacity = viewMode === 'full' ? 1 : 0.7;
-    }
+    // Set defaults based on view mode
+    gridConfig.lineWeight = viewMode === 'full' ? 1 : 0.5;
+    gridConfig.opacity = viewMode === 'full' ? 1 : 0.7;
     if (gridConfig.color === undefined) {
         gridConfig.color = '#ffffff';
     }

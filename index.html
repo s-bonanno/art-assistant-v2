@@ -345,23 +345,23 @@
         </div>
 
         <!-- Bottom toolbar -->
-        <div class="flex-none bg-zinc-850 border-t border-zinc-800">
-            <div class="flex justify-around items-center h-16 px-4">
-                <button class="p-2 rounded-md text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/75" data-panel="gridPanel">
-                    <i data-lucide="grid" class="w-6 h-6"></i>
-                    <span class="sr-only">Grid Settings</span>
+        <div class="flex-none bg-zinc-900/95 backdrop-blur-sm border-t border-zinc-800/50">
+            <div class="flex justify-around items-center h-16 px-4 max-w-md mx-auto">
+                <button class="flex flex-col items-center justify-center gap-1 p-2 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 transition-colors duration-200" data-panel="gridPanel">
+                    <i data-lucide="grid" class="w-5 h-5"></i>
+                    <span class="text-[10px] font-medium">Grid</span>
                 </button>
-                <button class="p-2 rounded-md text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/75" data-panel="canvasPanel">
-                    <i data-lucide="crop" class="w-6 h-6"></i>
-                    <span class="sr-only">Canvas Settings</span>
+                <button class="flex flex-col items-center justify-center gap-1 p-2 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 transition-colors duration-200" data-panel="canvasPanel">
+                    <i data-lucide="crop" class="w-5 h-5"></i>
+                    <span class="text-[10px] font-medium">Canvas</span>
                 </button>
-                <button class="p-2 rounded-md text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/75" data-panel="filtersPanel">
-                    <i data-lucide="sliders" class="w-6 h-6"></i>
-                    <span class="sr-only">Filters</span>
+                <button class="flex flex-col items-center justify-center gap-1 p-2 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 transition-colors duration-200" data-panel="filtersPanel">
+                    <i data-lucide="sliders" class="w-5 h-5"></i>
+                    <span class="text-[10px] font-medium">Filters</span>
                 </button>
-                <button class="p-2 rounded-md text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/75" id="exportBtn">
-                    <i data-lucide="download" class="w-6 h-6"></i>
-                    <span class="sr-only">Export</span>
+                <button class="flex flex-col items-center justify-center gap-1 p-2 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 transition-colors duration-200" id="exportBtn">
+                    <i data-lucide="download" class="w-5 h-5"></i>
+                    <span class="text-[10px] font-medium">Export</span>
                 </button>
             </div>
         </div>
@@ -397,20 +397,34 @@
                 if (activePanel === panel) {
                     settingsPanels.classList.add('translate-y-full');
                     panel.classList.add('hidden');
-                    button.classList.remove('text-indigo-400');
+                    button.classList.remove('text-indigo-400', 'bg-zinc-800/75');
+                    const icon = button.querySelector('i');
+                    const label = button.querySelector('span');
+                    if (icon) icon.classList.remove('text-indigo-400');
+                    if (label) label.classList.remove('text-indigo-400');
                     activePanel = null;
                     return;
                 }
 
                 // Hide all panels and reset button styles
                 panels.forEach(p => p.classList.add('hidden'));
-                toolbarButtons.forEach(b => b.classList.remove('text-indigo-400'));
+                toolbarButtons.forEach(b => {
+                    b.classList.remove('text-indigo-400', 'bg-zinc-800/75');
+                    const icon = b.querySelector('i');
+                    const label = b.querySelector('span');
+                    if (icon) icon.classList.remove('text-indigo-400');
+                    if (label) label.classList.remove('text-indigo-400');
+                });
 
                 // Show the selected panel
                 if (panel) {
                     settingsPanels.classList.remove('translate-y-full');
                     panel.classList.remove('hidden');
-                    button.classList.add('text-indigo-400');
+                    button.classList.add('text-indigo-400', 'bg-zinc-800/75');
+                    const icon = button.querySelector('i');
+                    const label = button.querySelector('span');
+                    if (icon) icon.classList.add('text-indigo-400');
+                    if (label) label.classList.add('text-indigo-400');
                     activePanel = panel;
                 }
             });
@@ -423,7 +437,13 @@
                 !settingsPanels.classList.contains('translate-y-full')) {
                 settingsPanels.classList.add('translate-y-full');
                 panels.forEach(p => p.classList.add('hidden'));
-                toolbarButtons.forEach(b => b.classList.remove('text-indigo-400'));
+                toolbarButtons.forEach(b => {
+                    b.classList.remove('text-indigo-400', 'bg-zinc-800/75');
+                    const icon = b.querySelector('i');
+                    const label = b.querySelector('span');
+                    if (icon) icon.classList.remove('text-indigo-400');
+                    if (label) label.classList.remove('text-indigo-400');
+                });
                 activePanel = null;
             }
         });
