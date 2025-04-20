@@ -238,7 +238,7 @@ initZoomPanListeners(canvas, currentImage, drawCanvas);
 function fitToCanvas() {
     if (config.viewMode !== 'canvas' || !currentImage) return;
     
-    // Reset zoom and pan
+    // Reset transform when loading new image
     setZoom(1);
     setPanX(0);
     setPanY(0);
@@ -247,6 +247,7 @@ function fitToCanvas() {
     drawCanvas();
 }
 
+// Update grid size limits
 function updateGridSizeLimits() {
     let width, height;
     
@@ -294,49 +295,6 @@ function updateGridSizeLimits() {
     }
 }
 
-// Update view mode toggle handler
-viewModeToggle.addEventListener('change', () => {
-    config.viewMode = viewModeToggle.checked ? 'canvas' : 'full';
-    
-    // Reset grid size to 1/5 of the longest side
-    if (currentImage) {
-        if (config.viewMode === 'full') {
-            // Full image mode - use pixels
-            const longestSide = Math.max(currentImage.naturalWidth, currentImage.naturalHeight);
-            config.gridSpacing = Math.floor(longestSide / 5);
-            gridSizeSlider.value = config.gridSpacing;
-            gridSizeValue.textContent = `${config.gridSpacing} px`;
-            unitSelect.style.display = 'none';
-        } else {
-            // Canvas mode - use cm
-            const longestSide = Math.max(config.canvasWidth, config.canvasHeight);
-            const pixelsPerCm = config.canvasWidth / config.canvasWidthCm;
-            config.gridSizeCm = (longestSide / 5) / pixelsPerCm;
-            gridSizeSlider.value = config.gridSizeCm;
-            gridSizeValue.textContent = `${config.gridSizeCm.toFixed(1)} cm`;
-            unitSelect.style.display = 'block';
-        }
-    }
-    
-    fitToScreenBtn.style.display = config.viewMode === 'full' ? 'inline-flex' : 'none';
-    zoom100Btn.style.display = config.viewMode === 'full' ? 'inline-flex' : 'none';
-    resetZoomBtn.style.display = config.viewMode === 'canvas' ? 'inline-flex' : 'none';
-    
-    if (currentImage) {
-        updateGridSizeLimits();
-        if (config.viewMode === 'full') {
-            fitToScreen();
-        } else {
-            fitToCanvas();
-        }
-        drawCanvas();
-        resizeCanvasToFit();
-    }
-    
-    // Add cache invalidation when switching modes
-    filterCache.needsUpdate = true;
-});
-
 // Add fit to screen functionality
 function fitToScreen() {
     if (config.viewMode !== 'full' || !currentImage) return;
@@ -348,8 +306,8 @@ function fitToScreen() {
     
     // Calculate the scale needed to fit the image
     const scale = Math.min(
-        (availableWidth - 64) / currentImage.naturalWidth,  // Account for padding (32px on each side)
-        (availableHeight - 64) / currentImage.naturalHeight // Account for padding (32px on each side)
+        (availableWidth - 64) / currentImage.naturalWidth,
+        (availableHeight - 64) / currentImage.naturalHeight
     );
     
     // Update zoom level
@@ -851,15 +809,60 @@ setDefaultGridStyle(config.viewMode);
 updateGridSpacing();
 updateCanvasSize();
 
-// Set initial toggle state and button visibility
-viewModeToggle.checked = config.viewMode === 'canvas';
-fitToScreenBtn.style.display = config.viewMode === 'full' ? 'inline-flex' : 'none';
-resetZoomBtn.style.display = config.viewMode === 'canvas' ? 'inline-flex' : 'none';
-
 // Initial resize
 window.addEventListener('load', () => {
     resizeCanvasToFit();
 });
 
 // Add event listener for 100% zoom button
-document.getElementById('zoom100Btn').addEventListener('click', () => zoomTo100(currentImage, drawCanvas, config)); 
+document.getElementById('zoom100Btn').addEventListener('click', () => zoomTo100(currentImage, drawCanvas, config));
+
+// View mode control functionality
+const showAllBtn = document.getElementById('showAllBtn');
+const cropToCanvasBtn = document.getElementById('cropToCanvasBtn');
+const canvasWidth = document.getElementById('canvasWidth');
+const canvasHeight = document.getElementById('canvasHeight');
+
+function updateViewMode(showAll) {
+    if (!showAllBtn || !cropToCanvasBtn) return; // Guard against null elements
+    
+    showAllBtn.setAttribute('data-active', showAll);
+    cropToCanvasBtn.setAttribute('data-active', !showAll);
+    
+    // Enable/disable canvas size controls
+    if (canvasWidth) canvasWidth.disabled = showAll;
+    if (canvasHeight) canvasHeight.disabled = showAll;
+    if (canvasUnitSelect) canvasUnitSelect.disabled = showAll;
+
+    // Update view mode in config
+    config.viewMode = showAll ? 'full' : 'canvas';
+    
+    // Update UI based on view mode
+    fitToScreenBtn.style.display = showAll ? 'inline-flex' : 'none';
+    zoom100Btn.style.display = showAll ? 'inline-flex' : 'none';
+    resetZoomBtn.style.display = showAll ? 'none' : 'inline-flex';
+    
+    // Update canvas if we have an image
+    if (currentImage) {
+        updateGridSizeLimits();
+        if (showAll) {
+            fitToScreen();
+        } else {
+            fitToCanvas();
+        }
+        drawCanvas();
+        resizeCanvasToFit();
+    }
+    
+    // Add cache invalidation when switching modes
+    filterCache.needsUpdate = true;
+}
+
+// Initialize view mode controls
+document.addEventListener('DOMContentLoaded', () => {
+    if (showAllBtn && cropToCanvasBtn) {
+        showAllBtn.addEventListener('click', () => updateViewMode(true));
+        cropToCanvasBtn.addEventListener('click', () => updateViewMode(false));
+        updateViewMode(false); // Initialize with Crop to Canvas mode
+    }
+}); 

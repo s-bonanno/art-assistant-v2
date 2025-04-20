@@ -253,6 +253,21 @@
             border-color: rgba(99, 102, 241, 0.5);
             box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
         }
+
+        /* Segmented control styling */
+        [data-active="true"] {
+            background-color: rgb(99, 102, 241);
+            color: white;
+        }
+
+        [data-active="false"] {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        [data-active="false"]:hover {
+            color: rgba(255, 255, 255, 0.6);
+            background-color: rgba(255, 255, 255, 0.05);
+        }
     </style>
 </head>
 <body class="h-full overflow-hidden bg-zinc-900">
@@ -378,30 +393,29 @@
             </div>
 
             <!-- Canvas settings panel -->
-            <div class="hidden bg-zinc-850 border-t border-zinc-800 p-4 space-y-4" id="canvasPanel">
-                <div class="pt-2">
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" id="viewModeToggle" class="sr-only peer">
-                        <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:bg-white peer-checked:bg-indigo-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                        <span class="ml-3 text-sm font-medium text-zinc-400">Crop to canvas</span>
-                    </label>
-                </div>
+            <div class="hidden bg-zinc-850 border-t border-zinc-800 p-4 space-y-6" id="canvasPanel">
+                <!-- View Mode Control -->
                 <div class="space-y-2">
-                    <label class="block text-sm font-medium text-zinc-400">Canvas Size</label>
-                    <div class="flex items-center gap-3">
+                    <span class="text-xs text-zinc-400">View Mode</span>
+                    <div class="grid grid-cols-2 bg-zinc-900/50 rounded-md p-0.5 gap-0.5">
+                        <button type="button" id="cropToCanvasBtn" class="text-xs py-1.5 rounded active:scale-95 transition-all duration-75" data-active="true">Crop to Canvas</button>
+                        <button type="button" id="showAllBtn" class="text-xs py-1.5 rounded active:scale-95 transition-all duration-75" data-active="false">Show All</button>
+                    </div>
+                </div>
+
+                <!-- Canvas Size -->
+                <div class="space-y-2" id="canvasSizeControls">
+                    <span class="text-xs text-zinc-400">Canvas Size</span>
+                    <div class="flex items-center gap-2">
                         <div class="flex items-center gap-2">
                             <input type="number" id="canvasWidth" value="50" min="1" step="1"
-                                class="block w-20 rounded-md border-0 bg-zinc-800 py-1.5 px-3 text-zinc-200 
-                                       shadow-sm ring-1 ring-inset ring-zinc-700 focus:ring-2 focus:ring-indigo-600 
-                                       sm:text-sm sm:leading-6">
-                            <span class="text-zinc-400">×</span>
+                                class="w-16 text-xs text-zinc-400 bg-zinc-850 border border-zinc-700 rounded-md px-2 py-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span class="text-xs text-zinc-400">×</span>
                             <input type="number" id="canvasHeight" value="50" min="1" step="1"
-                                class="block w-20 rounded-md border-0 bg-zinc-800 py-1.5 px-3 text-zinc-200 
-                                       shadow-sm ring-1 ring-inset ring-zinc-700 focus:ring-2 focus:ring-indigo-600 
-                                       sm:text-sm sm:leading-6">
+                                class="w-16 text-xs text-zinc-400 bg-zinc-850 border border-zinc-700 rounded-md px-2 py-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
                         </div>
                         <div class="relative group">
-                            <select id="canvasUnitSelect" class="w-16 text-xs text-zinc-400 bg-zinc-850 border border-zinc-700 rounded-md pl-2 pr-6 py-1.5 appearance-none hover:text-zinc-200 hover:border-zinc-600 focus:text-zinc-200">
+                            <select id="canvasUnitSelect" class="w-16 text-xs text-zinc-400 bg-zinc-850 border border-zinc-700 rounded-md pl-2 pr-6 py-1.5 appearance-none hover:text-zinc-200 hover:border-zinc-600 focus:text-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-zinc-400 disabled:hover:border-zinc-700">
                                 <option value="cm">cm</option>
                                 <option value="in">in</option>
                             </select>
@@ -647,6 +661,29 @@
                 activePanel = null;
             }
         });
+
+        // View mode control functionality
+        const showAllBtn = document.getElementById('showAllBtn');
+        const cropToCanvasBtn = document.getElementById('cropToCanvasBtn');
+        const canvasWidth = document.getElementById('canvasWidth');
+        const canvasHeight = document.getElementById('canvasHeight');
+        const canvasUnitSelect = document.getElementById('canvasUnitSelect');
+
+        function updateViewMode(showAll) {
+            showAllBtn.setAttribute('data-active', showAll);
+            cropToCanvasBtn.setAttribute('data-active', !showAll);
+            
+            // Enable/disable canvas size controls
+            canvasWidth.disabled = showAll;
+            canvasHeight.disabled = showAll;
+            canvasUnitSelect.disabled = showAll;
+        }
+
+        showAllBtn.addEventListener('click', () => updateViewMode(true));
+        cropToCanvasBtn.addEventListener('click', () => updateViewMode(false));
+
+        // Initialize with Show All selected
+        updateViewMode(true);
     </script>
     <script src="script.js" type="module"></script>
 </body>
