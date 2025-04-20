@@ -6,6 +6,7 @@ let isDragging = false;
 let lastMouseX = 0;
 let lastMouseY = 0;
 let animationFrameId = null;
+let _drawCanvas = null;
 
 // Touch gesture state
 let initialDistance = 0;
@@ -30,11 +31,12 @@ export function setPanY(value) {
 
 // Helper function to schedule canvas redraw
 function scheduleRedraw() {
+    if (!_drawCanvas) return;
     if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
     }
     animationFrameId = requestAnimationFrame(() => {
-        drawCanvas();
+        _drawCanvas();
         animationFrameId = null;
     });
 }
@@ -66,6 +68,7 @@ export function zoomTo100(currentImage, drawCanvas) {
 }
 
 export function initZoomPanListeners(canvas, currentImage, drawCanvas) {
+    _drawCanvas = drawCanvas;
     // Mouse wheel zoom handler
     canvas.addEventListener('wheel', (e) => {
         e.preventDefault();

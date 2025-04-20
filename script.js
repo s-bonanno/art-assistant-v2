@@ -276,49 +276,41 @@ function updateGridSizeLimits() {
 // Update view mode toggle handler
 viewModeToggle.addEventListener('change', () => {
     config.viewMode = viewModeToggle.checked ? 'canvas' : 'full';
+    
+    // Reset grid size to 1/5 of the longest side
+    if (currentImage) {
+        if (config.viewMode === 'full') {
+            // Full image mode - use pixels
+            const longestSide = Math.max(currentImage.naturalWidth, currentImage.naturalHeight);
+            config.gridSpacing = Math.floor(longestSide / 5);
+            gridSizeSlider.value = config.gridSpacing;
+            gridSquareSizeInput.value = config.gridSpacing;
+            gridSizeValue.textContent = `${config.gridSpacing} px`;
+            unitSelect.style.display = 'none';
+        } else {
+            // Canvas mode - use cm
+            const longestSide = Math.max(config.canvasWidth, config.canvasHeight);
+            const pixelsPerCm = config.canvasWidth / config.canvasWidthCm;
+            config.gridSizeCm = (longestSide / 5) / pixelsPerCm;
+            gridSizeSlider.value = config.gridSizeCm;
+            gridSquareSizeInput.value = config.gridSizeCm;
+            gridSizeValue.textContent = `${config.gridSizeCm.toFixed(1)} cm`;
+            unitSelect.style.display = 'block';
+        }
+    }
+    
     fitToScreenBtn.style.display = config.viewMode === 'full' ? 'inline-flex' : 'none';
     zoom100Btn.style.display = config.viewMode === 'full' ? 'inline-flex' : 'none';
     resetZoomBtn.style.display = config.viewMode === 'canvas' ? 'inline-flex' : 'none';
     
-    // Update grid input based on mode
-    if (config.viewMode === 'full') {
-        // In full image mode, use pixels
-        unitSelect.style.display = 'none';
-        
-        if (currentImage) {
-            updateGridSizeLimits();
-            // Convert current grid size to pixels if needed
-            if (config.gridSpacing !== undefined) {
-                const pixelsPerCm = currentImage.naturalWidth / config.canvasWidthCm;
-                config.gridSpacing = config.gridSpacing * pixelsPerCm;
-                gridSizeSlider.value = config.gridSpacing;
-                gridSquareSizeInput.value = config.gridSpacing;
-                gridSizeValue.textContent = `${config.gridSpacing} px`;
-            }
-            fitToScreen();
-            drawCanvas();
-        }
-    } else {
-        // In canvas mode, use cm/in
-        unitSelect.style.display = 'block';
-        
-        if (currentImage) {
-            updateGridSizeLimits();
-            // Convert current grid size to cm if needed
-            if (config.gridSpacing !== undefined) {
-                const cmPerPixel = config.canvasWidthCm / currentImage.naturalWidth;
-                config.gridSpacing = config.gridSpacing * cmPerPixel;
-                config.gridSizeCm = config.gridSpacing;
-                gridSizeSlider.value = config.gridSizeCm;
-                gridSquareSizeInput.value = config.gridSizeCm;
-                gridSizeValue.textContent = `${config.gridSizeCm} cm`;
-            }
-            fitToCanvas();
-            drawCanvas();
-        }
-    }
-    
     if (currentImage) {
+        updateGridSizeLimits();
+        if (config.viewMode === 'full') {
+            fitToScreen();
+        } else {
+            fitToCanvas();
+        }
+        drawCanvas();
         resizeCanvasToFit();
     }
     
