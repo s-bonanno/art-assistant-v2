@@ -24,16 +24,35 @@ export const filterCache = {
 export function applyFilters(ctx, canvas, x, y, width, height) {
     if (!canvas) return;
 
+    console.log('Applying filters:', {
+        enabledFilters: {
+            posterise: filters.posterise.enabled,
+            edges: filters.edges.enabled,
+            lightSplit: filters.lightSplit.enabled
+        },
+        lightValues: filters.light,
+        cacheState: {
+            needsUpdate: filterCache.needsUpdate,
+            width: filterCache.width,
+            height: filterCache.height,
+            hasImage: !!filterCache.image
+        }
+    });
+
     // Check if light values have changed
     const lightValuesChanged = Object.keys(filters.light).some(key => 
         filters.light[key] !== filterCache.lastLightValues[key]
     );
+
+    console.log('Light values changed:', lightValuesChanged);
 
     // Check if we need to update the cache
     if (filterCache.needsUpdate || 
         filterCache.width !== width || 
         filterCache.height !== height ||
         lightValuesChanged) {
+        
+        console.log('Updating filter cache');
         
         // Create a temporary canvas for filter processing
         const tempCanvas = document.createElement('canvas');
@@ -49,14 +68,17 @@ export function applyFilters(ctx, canvas, x, y, width, height) {
 
         // Apply other filters
         if (filters.posterise.enabled) {
+            console.log('Applying posterise filter');
             applyPosterise(tempCtx, tempCanvas, filters.posterise.levels);
         }
 
         if (filters.edges.enabled) {
+            console.log('Applying edge detection filter');
             applyEdgeDetection(tempCtx, tempCanvas, filters.edges.strength, filters.edges.opacity);
         }
 
         if (filters.lightSplit.enabled) {
+            console.log('Applying light split filter');
             applyLightSplit(tempCtx, tempCanvas, filters.lightSplit.shadow, filters.lightSplit.highlight);
         }
 
@@ -67,6 +89,8 @@ export function applyFilters(ctx, canvas, x, y, width, height) {
         filterCache.needsUpdate = false;
         // Store current light values
         Object.assign(filterCache.lastLightValues, filters.light);
+    } else {
+        console.log('Using cached filter result');
     }
 
     // Draw from cache
@@ -75,6 +99,8 @@ export function applyFilters(ctx, canvas, x, y, width, height) {
 
 // Apply light adjustments
 function applyLightAdjustments(ctx, canvas) {
+    console.log('Applying light adjustments:', filters.light);
+    
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const data = imageData.data;
 
@@ -84,35 +110,47 @@ function applyLightAdjustments(ctx, canvas) {
         const g = data[i + 1];
         const b = data[i + 2];
 
-        // Apply exposure
-        const exposureFactor = 1 + (filters.light.exposure / 100);
-        data[i] = Math.min(255, Math.max(0, r * exposureFactor));
-        data[i + 1] = Math.min(255, Math.max(0, g * exposureFactor));
-        data[i + 2] = Math.min(255, Math.max(0, b * exposureFactor));
+        // Calculate luminance for highlights/shadows
+        const luminance = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
 
-        // Apply contrast
+        // Apply exposure (convert from percentage to factor)
+        const exposureFactor = 1 + (filters.light.exposure / 100);
+        let newR = Math.min(255, Math.max(0, r * exposureFactor));
+        let newG = Math.min(255, Math.max(0, g * exposureFactor));
+        let newB = Math.min(255, Math.max(0, b * exposureFactor));
+
+        // Apply contrast (convert from percentage to factor)
         const contrastFactor = 1 + (filters.light.contrast / 100);
-        const avg = (r + g + b) / 3;
-        data[i] = Math.min(255, Math.max(0, avg + (data[i] - avg) * contrastFactor));
-        data[i + 1] = Math.min(255, Math.max(0, avg + (data[i + 1] - avg) * contrastFactor));
-        data[i + 2] = Math.min(255, Math.max(0, avg + (data[i + 2] - avg) * contrastFactor));
+        const avg = (newR + newG + newB) / 3;
+        newR = Math.min(255, Math.max(0, avg + (newR - avg) * contrastFactor));
+        newG = Math.min(255, Math.max(0, avg + (newG - avg) * contrastFactor));
+        newB = Math.min(255, Math.max(0, avg + (newB - avg) * contrastFactor));
 
         // Apply highlights and shadows
-        const luminance = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
         if (luminance > 0.5) {
             // Highlights
             const highlightFactor = 1 + (filters.light.highlights / 100);
-            data[i] = Math.min(255, Math.max(0, data[i] * highlightFactor));
-            data[i + 1] = Math.min(255, Math.max(0, data[i + 1] * highlightFactor));
-            data[i + 2] = Math.min(255, Math.max(0, data[i + 2] * highlightFactor));
+            newR = Math.min(255, Math.max(0, newR * highlightFactor));
+            newG = Math.min(255, Math.max(0, newG * highlightFactor));
+            newB = Math.min(255, Math.max(0, newB * highlightFactor));
         } else {
             // Shadows
             const shadowFactor = 1 + (filters.light.shadows / 100);
-            data[i] = Math.min(255, Math.max(0, data[i] * shadowFactor));
-            data[i + 1] = Math.min(255, Math.max(0, data[i + 1] * shadowFactor));
-            data[i + 2] = Math.min(255, Math.max(0, data[i + 2] * shadowFactor));
+            newR = Math.min(255, Math.max(0, newR * shadowFactor));
+            newG = Math.min(255, Math.max(0, newG * shadowFactor));
+            newB = Math.min(255, Math.max(0, newB * shadowFactor));
         }
+
+        // Update the pixel data
+        data[i] = newR;
+        data[i + 1] = newG;
+        data[i + 2] = newB;
     }
+
+    console.log('Light adjustments applied. Sample values:', {
+        original: [data[0], data[1], data[2]],
+        adjusted: [data[data.length - 4], data[data.length - 3], data[data.length - 2]]
+    });
 
     ctx.putImageData(imageData, 0, 0);
 }

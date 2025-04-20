@@ -558,8 +558,14 @@ exportBtn.addEventListener('click', () => {
         // Draw the full image to temp canvas
         tempCtx.drawImage(currentImage, 0, 0);
 
-        // Apply filters to temp canvas if any are enabled
-        if (Object.values(filters).some(f => f.enabled)) {
+        // Apply filters to temp canvas if any filters are active
+        const hasActiveFilters = Object.values(filters).some(f => 
+            (f.enabled !== undefined && f.enabled) || // For filters with enabled property
+            (f.exposure !== undefined && (f.exposure !== 0 || f.contrast !== 0 || f.highlights !== 0 || f.shadows !== 0)) // For light adjustments
+        );
+
+        if (hasActiveFilters) {
+            console.log('Applying filters during export:', filters);
             applyFilters(tempCtx, tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
         }
 
@@ -625,8 +631,14 @@ exportBtn.addEventListener('click', () => {
         // Draw the scaled image to temp canvas
         tempCtx.drawImage(currentImage, 0, 0, finalWidth, finalHeight);
 
-        // Apply filters to temp canvas if any are enabled
-        if (Object.values(filters).some(f => f.enabled)) {
+        // Apply filters to temp canvas if any filters are active
+        const hasActiveFilters = Object.values(filters).some(f => 
+            (f.enabled !== undefined && f.enabled) || // For filters with enabled property
+            (f.exposure !== undefined && (f.exposure !== 0 || f.contrast !== 0 || f.highlights !== 0 || f.shadows !== 0)) // For light adjustments
+        );
+
+        if (hasActiveFilters) {
+            console.log('Applying filters during export:', filters);
             applyFilters(tempCtx, tempCanvas, 0, 0, finalWidth, finalHeight);
         }
 
