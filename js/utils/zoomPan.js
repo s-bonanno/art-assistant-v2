@@ -5,6 +5,7 @@ let _panY = 0;
 let isDragging = false;
 let lastMouseX = 0;
 let lastMouseY = 0;
+let animationFrameId = null;
 
 // Touch gesture state
 let initialDistance = 0;
@@ -12,11 +13,31 @@ let initialZoom = 1;
 
 // Getters and setters for state
 export function getZoom() { return _zoom; }
-export function setZoom(value) { _zoom = value; }
+export function setZoom(value) { 
+    _zoom = value;
+    scheduleRedraw();
+}
 export function getPanX() { return _panX; }
-export function setPanX(value) { _panX = value; }
+export function setPanX(value) { 
+    _panX = value;
+    scheduleRedraw();
+}
 export function getPanY() { return _panY; }
-export function setPanY(value) { _panY = value; }
+export function setPanY(value) { 
+    _panY = value;
+    scheduleRedraw();
+}
+
+// Helper function to schedule canvas redraw
+function scheduleRedraw() {
+    if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+    }
+    animationFrameId = requestAnimationFrame(() => {
+        drawCanvas();
+        animationFrameId = null;
+    });
+}
 
 export function resetZoomAndPan(drawCanvas) {
     _zoom = 1;
@@ -54,7 +75,7 @@ export function initZoomPanListeners(canvas, currentImage, drawCanvas) {
         _zoom *= zoomFactor;
         _zoom = Math.min(Math.max(0.1, _zoom), 10);
         
-        drawCanvas();
+        scheduleRedraw();
     });
 
     // Touch gesture handling
@@ -79,7 +100,7 @@ export function initZoomPanListeners(canvas, currentImage, drawCanvas) {
             const scale = currentDistance / initialDistance;
             _zoom = Math.min(Math.max(0.1, initialZoom * scale), 10);
             
-            drawCanvas();
+            scheduleRedraw();
         }
     });
 
@@ -102,7 +123,7 @@ export function initZoomPanListeners(canvas, currentImage, drawCanvas) {
         lastMouseX = e.offsetX;
         lastMouseY = e.offsetY;
         
-        drawCanvas();
+        scheduleRedraw();
     });
 
     canvas.addEventListener('mouseup', () => {
@@ -117,10 +138,10 @@ export function initZoomPanListeners(canvas, currentImage, drawCanvas) {
     document.addEventListener('keydown', (e) => {
         if (e.key === '+' || e.key === '=') {
             _zoom = Math.min(10, _zoom + 0.1);
-            drawCanvas();
+            scheduleRedraw();
         } else if (e.key === '-' || e.key === '_') {
             _zoom = Math.max(0.1, _zoom - 0.1);
-            drawCanvas();
+            scheduleRedraw();
         }
     });
 }
