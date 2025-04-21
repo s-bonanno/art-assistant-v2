@@ -648,8 +648,15 @@ canvas.addEventListener('mousemove', (e) => {
     const deltaX = e.offsetX - lastMouseX;
     const deltaY = e.offsetY - lastMouseY;
     
-    setPanX(getPanX() + deltaX);
-    setPanY(getPanY() + deltaY);
+    // Scale the delta by zoom level in full image mode
+    if (config.viewMode === 'full') {
+        const zoom = getZoom();
+        setPanX(getPanX() + deltaX / zoom);
+        setPanY(getPanY() + deltaY / zoom);
+    } else {
+        setPanX(getPanX() + deltaX);
+        setPanY(getPanY() + deltaY);
+    }
     
     lastMouseX = e.offsetX;
     lastMouseY = e.offsetY;
@@ -838,18 +845,26 @@ function drawCanvas() {
     // Draw image if one is loaded
     if (currentImage) {
         if (config.viewMode === 'full') {
-            // Full image mode - existing logic
+            // Full image mode
             canvas.width = currentImage.naturalWidth;
             canvas.height = currentImage.naturalHeight;
             
             ctx.save();
+            
+            // Reset transform
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            
+            // Center the canvas
             const centerX = canvasContainer.clientWidth / 2;
             const centerY = canvasContainer.clientHeight / 2;
-            
-            ctx.setTransform(1, 0, 0, 1, 0, 0);
             ctx.translate(centerX, centerY);
-            ctx.scale(getZoom(), getZoom());
+            
+            // Apply zoom and pan
+            const zoom = getZoom();
+            ctx.scale(zoom, zoom);
             ctx.translate(getPanX(), getPanY());
+            
+            // Center the image
             ctx.translate(-currentImage.naturalWidth / 2, -currentImage.naturalHeight / 2);
             
             // Use original image if zoomed to 100%, otherwise use preview
