@@ -516,8 +516,36 @@ canvas.addEventListener('wheel', (e) => {
     e.preventDefault();
     if (!currentImage) return;
 
+    // Get mouse position relative to canvas
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    // Calculate the point in image coordinates
+    const scale = Math.min(
+        config.canvasWidth / currentImage.width,
+        config.canvasHeight / currentImage.height
+    );
+    const baseWidth = currentImage.width * scale;
+    const baseHeight = currentImage.height * scale;
+    const centerX = (config.canvasWidth - baseWidth) / 2;
+    const centerY = (config.canvasHeight - baseHeight) / 2;
+
+    // Convert mouse position to image coordinates
+    const imageX = (mouseX - centerX - getPanX()) / getZoom();
+    const imageY = (mouseY - centerY - getPanY()) / getZoom();
+
+    // Calculate new zoom
     const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-    setZoom(Math.min(Math.max(0.1, getZoom() * zoomFactor), 10));
+    const newZoom = Math.min(Math.max(0.1, getZoom() * zoomFactor), 10);
+
+    // Calculate new pan to keep the point under the mouse fixed
+    const newPanX = mouseX - centerX - imageX * newZoom;
+    const newPanY = mouseY - centerY - imageY * newZoom;
+
+    setZoom(newZoom);
+    setPanX(newPanX);
+    setPanY(newPanY);
     
     drawCanvas();
 });
@@ -525,27 +553,83 @@ canvas.addEventListener('wheel', (e) => {
 // Touch gesture handling
 let initialDistance = 0;
 let initialZoom = 1;
+let initialCenterX = 0;
+let initialCenterY = 0;
+let initialPanX = 0;
+let initialPanY = 0;
+
+function getTouchPointInCanvas(touchX, touchY) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+        x: touchX - rect.left,
+        y: touchY - rect.top
+    };
+}
 
 canvas.addEventListener('touchstart', (e) => {
     if (e.touches.length === 2) {
+        e.preventDefault();
+        
+        // Calculate initial distance between touch points
         initialDistance = Math.hypot(
             e.touches[0].clientX - e.touches[1].clientX,
             e.touches[0].clientY - e.touches[1].clientY
         );
+        
+        // Calculate initial center point
+        const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        const centerPoint = getTouchPointInCanvas(centerX, centerY);
+        
+        initialCenterX = centerPoint.x;
+        initialCenterY = centerPoint.y;
+        
+        // Store initial transform state
         initialZoom = getZoom();
+        initialPanX = getPanX();
+        initialPanY = getPanY();
     }
 });
 
 canvas.addEventListener('touchmove', (e) => {
     if (e.touches.length === 2) {
         e.preventDefault();
+        
+        // Calculate current distance and center point
         const currentDistance = Math.hypot(
             e.touches[0].clientX - e.touches[1].clientX,
             e.touches[0].clientY - e.touches[1].clientY
         );
         
+        const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        const currentCenter = getTouchPointInCanvas(centerX, centerY);
+        
+        // Calculate zoom scale
         const scale = currentDistance / initialDistance;
-        setZoom(Math.min(Math.max(0.1, initialZoom * scale), 10));
+        const newZoom = Math.min(Math.max(0.1, initialZoom * scale), 10);
+        
+        // Calculate the point in image coordinates
+        const imageScale = Math.min(
+            config.canvasWidth / currentImage.width,
+            config.canvasHeight / currentImage.height
+        );
+        const baseWidth = currentImage.width * imageScale;
+        const baseHeight = currentImage.height * imageScale;
+        const centerOffsetX = (config.canvasWidth - baseWidth) / 2;
+        const centerOffsetY = (config.canvasHeight - baseHeight) / 2;
+        
+        // Convert center point to image coordinates
+        const imageX = (initialCenterX - centerOffsetX - initialPanX) / initialZoom;
+        const imageY = (initialCenterY - centerOffsetY - initialPanY) / initialZoom;
+        
+        // Calculate new pan to keep the center point fixed
+        const newPanX = currentCenter.x - centerOffsetX - imageX * newZoom;
+        const newPanY = currentCenter.y - centerOffsetY - imageY * newZoom;
+        
+        setZoom(newZoom);
+        setPanX(newPanX);
+        setPanY(newPanY);
         
         drawCanvas();
     }
