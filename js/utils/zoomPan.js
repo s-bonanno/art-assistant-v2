@@ -80,11 +80,16 @@ function handleZoomFullMode(mouseX, mouseY, zoomFactor, currentImage) {
     const imageX = ((mouseX - canvasCenterX) / _zoom - _panX) + currentImage.naturalWidth / 2;
     const imageY = ((mouseY - canvasCenterY) / _zoom - _panY) + currentImage.naturalHeight / 2;
     
-    // Apply zoom with more flexible minimum zoom in full mode
-    const minZoom = Math.min(0.1, Math.min(
-        canvas.width / currentImage.naturalWidth,
-        canvas.height / currentImage.naturalHeight
-    ));
+    // Calculate the same scale as fitToScreen()
+    const mainContainer = document.querySelector('.relative.w-full');
+    const availableWidth = mainContainer.clientWidth;
+    const availableHeight = mainContainer.clientHeight;
+    const minZoom = Math.min(
+        (availableWidth - 64) / currentImage.naturalWidth,
+        (availableHeight - 64) / currentImage.naturalHeight
+    );
+    
+    // Apply zoom with minimum matching fitToScreen scale
     const newZoom = Math.min(Math.max(minZoom, _zoom * zoomFactor), 10);
     
     // Forward transform to get new pan
@@ -216,11 +221,16 @@ export function initZoomPanListeners(canvas, currentImage, drawCanvas, config) {
                 const imageX = ((initialCenterX - canvasCenterX) / initialZoom - _panX) + currentImage.naturalWidth / 2;
                 const imageY = ((initialCenterY - canvasCenterY) / initialZoom - _panY) + currentImage.naturalHeight / 2;
                 
-                // Apply zoom with more flexible minimum zoom in full mode
-                const minZoom = Math.min(0.1, Math.min(
-                    canvas.width / currentImage.naturalWidth,
-                    canvas.height / currentImage.naturalHeight
-                ));
+                // Calculate the same scale as fitToScreen()
+                const mainContainer = document.querySelector('.relative.w-full');
+                const availableWidth = mainContainer.clientWidth;
+                const availableHeight = mainContainer.clientHeight;
+                const minZoom = Math.min(
+                    (availableWidth - 64) / currentImage.naturalWidth,
+                    (availableHeight - 64) / currentImage.naturalHeight
+                );
+                
+                // Apply zoom with minimum matching fitToScreen scale
                 const scale = currentDistance / initialDistance;
                 const newZoom = Math.min(Math.max(minZoom, initialZoom * scale), 10);
                 
