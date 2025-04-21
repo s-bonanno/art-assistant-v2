@@ -116,7 +116,11 @@ function resizeCanvasToFit() {
     let width, height;
     
     if (config.viewMode === 'full' && currentImage) {
-        // In full image mode, maintain aspect ratio while fitting to viewport
+        // In full image mode, set canvas to match image dimensions
+        canvas.width = currentImage.naturalWidth;
+        canvas.height = currentImage.naturalHeight;
+        
+        // Calculate display dimensions while maintaining aspect ratio
         const imageAspectRatio = currentImage.naturalHeight / currentImage.naturalWidth;
         const availableAspectRatio = maxHeight / maxWidth;
         
@@ -129,10 +133,6 @@ function resizeCanvasToFit() {
             width = maxWidth;
             height = width * imageAspectRatio;
         }
-        
-        // Set canvas dimensions to match image
-        canvas.width = currentImage.naturalWidth;
-        canvas.height = currentImage.naturalHeight;
     } else {
         // Canvas mode - existing logic
         const canvasAspectRatio = config.canvasHeightCm / config.canvasWidthCm;
@@ -269,6 +269,7 @@ function onImageLoaded(img) {
     currentImage = img;
     zoomPanInitialized = false;
     initializeZoomPan();
+    resizeCanvasToFit();
     drawCanvas();
 }
 
@@ -822,17 +823,14 @@ function drawCanvas() {
     if (currentImage) {
         if (config.viewMode === 'full') {
             // Full image mode
-            canvas.width = currentImage.naturalWidth;
-            canvas.height = currentImage.naturalHeight;
-            
             ctx.save();
             
             // Reset transform
             ctx.setTransform(1, 0, 0, 1, 0, 0);
             
-            // Center the canvas
-            const centerX = canvasContainer.clientWidth / 2;
-            const centerY = canvasContainer.clientHeight / 2;
+            // Center the canvas using its actual dimensions
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
             ctx.translate(centerX, centerY);
             
             // Apply zoom and pan

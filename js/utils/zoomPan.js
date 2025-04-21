@@ -68,10 +68,6 @@ export function zoomTo100(currentImage, drawCanvas, config) {
 export function initZoomPanListeners(canvas, currentImage, drawCanvas, config) {
     _drawCanvas = drawCanvas;
     
-    console.log('Initializing zoom pan listeners');
-    console.log('Canvas:', canvas);
-    console.log('Current image:', currentImage);
-    
     // Mouse wheel zoom handler
     canvas.addEventListener('wheel', (e) => {
         e.preventDefault();
@@ -88,26 +84,18 @@ export function initZoomPanListeners(canvas, currentImage, drawCanvas, config) {
 
         if (config.viewMode === 'full') {
             // Full image mode
-            console.log('Mouse position:', { mouseX, mouseY });
-            console.log('Container center:', { centerX, centerY });
-            console.log('Current pan:', { panX: _panX, panY: _panY });
-            console.log('Current zoom:', _zoom);
-
             // Calculate the point in image space before zoom
             const imageX = (mouseX - centerX - _panX) / _zoom;
             const imageY = (mouseY - centerY - _panY) / _zoom;
-            console.log('Point in image space:', { imageX, imageY });
-
+            
             // Apply zoom
             const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
             const newZoom = Math.min(Math.max(0.1, _zoom * zoomFactor), 10);
-            console.log('New zoom:', newZoom);
             
             // Calculate new pan to keep the point under the cursor fixed
             _panX = mouseX - centerX - (imageX * newZoom);
             _panY = mouseY - centerY - (imageY * newZoom);
             
-            console.log('New pan:', { newPanX: _panX, newPanY: _panY });
             _zoom = newZoom;
         } else {
             // Canvas mode
@@ -171,11 +159,19 @@ export function initZoomPanListeners(canvas, currentImage, drawCanvas, config) {
             const currentTouchX = e.touches[0].clientX;
             const currentTouchY = e.touches[0].clientY;
             
-            const deltaX = currentTouchX - lastTouchX;
-            const deltaY = currentTouchY - lastTouchY;
-            
-            _panX += deltaX;
-            _panY += deltaY;
+            if (config.viewMode === 'full') {
+                // In full mode, scale deltas by zoom level
+                const deltaX = (currentTouchX - lastTouchX) / _zoom;
+                const deltaY = (currentTouchY - lastTouchY) / _zoom;
+                _panX += deltaX;
+                _panY += deltaY;
+            } else {
+                // Canvas mode - use raw deltas
+                const deltaX = currentTouchX - lastTouchX;
+                const deltaY = currentTouchY - lastTouchY;
+                _panX += deltaX;
+                _panY += deltaY;
+            }
             
             lastTouchX = currentTouchX;
             lastTouchY = currentTouchY;
@@ -202,14 +198,26 @@ export function initZoomPanListeners(canvas, currentImage, drawCanvas, config) {
     canvas.addEventListener('mousemove', (e) => {
         if (!isDragging) return;
         
-        const deltaX = (e.offsetX - lastMouseX) / _zoom;
-        const deltaY = (e.offsetY - lastMouseY) / _zoom;
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
         
-        _panX += deltaX;
-        _panY += deltaY;
+        if (config.viewMode === 'full') {
+            // In full mode, scale deltas by zoom level
+            const deltaX = (mouseX - lastMouseX) / _zoom;
+            const deltaY = (mouseY - lastMouseY) / _zoom;
+            _panX += deltaX;
+            _panY += deltaY;
+        } else {
+            // Canvas mode - use raw deltas
+            const deltaX = mouseX - lastMouseX;
+            const deltaY = mouseY - lastMouseY;
+            _panX += deltaX;
+            _panY += deltaY;
+        }
         
-        lastMouseX = e.offsetX;
-        lastMouseY = e.offsetY;
+        lastMouseX = mouseX;
+        lastMouseY = mouseY;
         
         scheduleRedraw();
     });
