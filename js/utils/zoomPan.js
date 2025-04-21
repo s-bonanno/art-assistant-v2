@@ -14,6 +14,8 @@ let initialZoom = 1;
 let lastTouchX = 0;
 let lastTouchY = 0;
 let isTouchPanning = false;
+let initialCenterX = 0;
+let initialCenterY = 0;
 
 // Getters and setters for state
 export function getZoom() { return _zoom; }
@@ -65,6 +67,67 @@ export function zoomTo100(currentImage, drawCanvas, config) {
     drawCanvas();
 }
 
+function handleZoomFullMode(mouseX, mouseY, zoomFactor, currentImage) {
+    const canvasCenterX = canvas.width / 2;
+    const canvasCenterY = canvas.height / 2;
+    
+    // Reverse transform stack to get image-relative position
+    // 1. Start with mouse position
+    // 2. Subtract canvas center (undo translate to center)
+    // 3. Divide by zoom (undo scale)
+    // 4. Subtract pan (undo pan translate)
+    // 5. Add image center (undo -image center translate)
+    const imageX = ((mouseX - canvasCenterX) / _zoom - _panX) + currentImage.naturalWidth / 2;
+    const imageY = ((mouseY - canvasCenterY) / _zoom - _panY) + currentImage.naturalHeight / 2;
+    
+    // Apply zoom
+    const newZoom = Math.min(Math.max(0.1, _zoom * zoomFactor), 10);
+    
+    // Forward transform to get new pan
+    // 1. Start with image position
+    // 2. Subtract image center
+    // 3. Multiply by new zoom
+    // 4. Add new pan
+    // 5. Add canvas center
+    // Set equal to mouse position and solve for pan
+    _panX = (mouseX - canvasCenterX) / newZoom - (imageX - currentImage.naturalWidth / 2);
+    _panY = (mouseY - canvasCenterY) / newZoom - (imageY - currentImage.naturalHeight / 2);
+    _zoom = newZoom;
+}
+
+function handleZoomCanvasMode(mouseX, mouseY, zoomFactor, currentImage, config) {
+    // Calculate base scale to fit image in canvas
+    const scale = Math.min(
+        config.canvasWidth / currentImage.width,
+        config.canvasHeight / currentImage.height
+    );
+    
+    // Calculate base dimensions and center
+    const baseWidth = currentImage.width * scale;
+    const baseHeight = currentImage.height * scale;
+    const canvasCenterX = (config.canvasWidth - baseWidth) / 2;
+    const canvasCenterY = (config.canvasHeight - baseHeight) / 2;
+    
+    // Reverse transform to get image-relative position
+    // 1. Start with mouse position
+    // 2. Subtract canvas center and pan (undo translate to center + pan)
+    // 3. Divide by (zoom * scale) (undo scale and zoom)
+    const imageX = (mouseX - canvasCenterX - _panX) / (_zoom * scale);
+    const imageY = (mouseY - canvasCenterY - _panY) / (_zoom * scale);
+    
+    // Apply zoom
+    const newZoom = Math.min(Math.max(0.1, _zoom * zoomFactor), 10);
+    
+    // Forward transform to get new pan
+    // 1. Start with image position
+    // 2. Multiply by (newZoom * scale)
+    // 3. Add canvas center and new pan
+    // Set equal to mouse position and solve for pan
+    _panX = mouseX - canvasCenterX - (imageX * newZoom * scale);
+    _panY = mouseY - canvasCenterY - (imageY * newZoom * scale);
+    _zoom = newZoom;
+}
+
 export function initZoomPanListeners(canvas, currentImage, drawCanvas, config) {
     _drawCanvas = drawCanvas;
     
@@ -73,55 +136,19 @@ export function initZoomPanListeners(canvas, currentImage, drawCanvas, config) {
         e.preventDefault();
         if (!currentImage) return;
 
-        // Get mouse position relative to canvas container
-        const containerRect = canvas.parentElement.getBoundingClientRect();
-        const mouseX = e.clientX - containerRect.left;
-        const mouseY = e.clientY - containerRect.top;
-
-        // Get container center
-        const centerX = containerRect.width / 2;
-        const centerY = containerRect.height / 2;
-
+        // Get mouse position in canvas pixel space
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const mouseX = (e.clientX - rect.left) * scaleX;
+        const mouseY = (e.clientY - rect.top) * scaleY;
+        
+        // Apply zoom based on mode
+        const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
         if (config.viewMode === 'full') {
-            // Full image mode
-            // Calculate the point in image space before zoom
-            const imageX = (mouseX - centerX - _panX) / _zoom;
-            const imageY = (mouseY - centerY - _panY) / _zoom;
-            
-            // Apply zoom
-            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-            const newZoom = Math.min(Math.max(0.1, _zoom * zoomFactor), 10);
-            
-            // Calculate new pan to keep the point under the cursor fixed
-            _panX = mouseX - centerX - (imageX * newZoom);
-            _panY = mouseY - centerY - (imageY * newZoom);
-            
-            _zoom = newZoom;
+            handleZoomFullMode(mouseX, mouseY, zoomFactor, currentImage);
         } else {
-            // Canvas mode
-            const scale = Math.min(
-                config.canvasWidth / currentImage.width,
-                config.canvasHeight / currentImage.height
-            );
-            
-            const baseWidth = currentImage.width * scale;
-            const baseHeight = currentImage.height * scale;
-            const canvasCenterX = (config.canvasWidth - baseWidth) / 2;
-            const canvasCenterY = (config.canvasHeight - baseHeight) / 2;
-            
-            // Calculate the point in image space before zoom
-            const imageX = (mouseX - canvasCenterX - _panX) / (_zoom * scale);
-            const imageY = (mouseY - canvasCenterY - _panY) / (_zoom * scale);
-            
-            // Apply zoom
-            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-            const newZoom = Math.min(Math.max(0.1, _zoom * zoomFactor), 10);
-            
-            // Calculate new pan to keep the point under the cursor fixed
-            _panX = mouseX - canvasCenterX - (imageX * newZoom * scale);
-            _panY = mouseY - canvasCenterY - (imageY * newZoom * scale);
-            
-            _zoom = newZoom;
+            handleZoomCanvasMode(mouseX, mouseY, zoomFactor, currentImage, config);
         }
         
         scheduleRedraw();
@@ -130,34 +157,89 @@ export function initZoomPanListeners(canvas, currentImage, drawCanvas, config) {
     // Touch gesture handling
     canvas.addEventListener('touchstart', (e) => {
         if (e.touches.length === 2) {
-            initialDistance = Math.hypot(
-                e.touches[0].clientX - e.touches[1].clientX,
-                e.touches[0].clientY - e.touches[1].clientY
-            );
+            e.preventDefault();
+            
+            // Get touch points in canvas pixel space
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const touch1X = (e.touches[0].clientX - rect.left) * scaleX;
+            const touch1Y = (e.touches[0].clientY - rect.top) * scaleY;
+            const touch2X = (e.touches[1].clientX - rect.left) * scaleX;
+            const touch2Y = (e.touches[1].clientY - rect.top) * scaleY;
+            
+            // Calculate initial distance and center point
+            initialDistance = Math.hypot(touch2X - touch1X, touch2Y - touch1Y);
             initialZoom = _zoom;
+            
+            // Store initial center point
+            initialCenterX = (touch1X + touch2X) / 2;
+            initialCenterY = (touch1Y + touch2Y) / 2;
         } else if (e.touches.length === 1) {
             isTouchPanning = true;
-            lastTouchX = e.touches[0].clientX;
-            lastTouchY = e.touches[0].clientY;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            lastTouchX = (e.touches[0].clientX - rect.left) * scaleX;
+            lastTouchY = (e.touches[0].clientY - rect.top) * scaleY;
         }
     });
 
     canvas.addEventListener('touchmove', (e) => {
         if (e.touches.length === 2) {
             e.preventDefault();
-            const currentDistance = Math.hypot(
-                e.touches[0].clientX - e.touches[1].clientX,
-                e.touches[0].clientY - e.touches[1].clientY
-            );
             
-            const scale = currentDistance / initialDistance;
-            _zoom = Math.min(Math.max(0.1, initialZoom * scale), 10);
+            // Get touch points in canvas pixel space
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const touch1X = (e.touches[0].clientX - rect.left) * scaleX;
+            const touch1Y = (e.touches[0].clientY - rect.top) * scaleY;
+            const touch2X = (e.touches[1].clientX - rect.left) * scaleX;
+            const touch2Y = (e.touches[1].clientY - rect.top) * scaleY;
+            
+            // Calculate current distance and center point
+            const currentDistance = Math.hypot(touch2X - touch1X, touch2Y - touch1Y);
+            const currentCenterX = (touch1X + touch2X) / 2;
+            const currentCenterY = (touch1Y + touch2Y) / 2;
+            
+            if (config.viewMode === 'full') {
+                // Full image mode - calculate image-relative position
+                const canvasCenterX = canvas.width / 2;
+                const canvasCenterY = canvas.height / 2;
+                
+                // Reverse transform stack to get image-relative position
+                const imageX = ((initialCenterX - canvasCenterX) / _zoom - _panX) + currentImage.naturalWidth / 2;
+                const imageY = ((initialCenterY - canvasCenterY) / _zoom - _panY) + currentImage.naturalHeight / 2;
+                
+                // Apply zoom
+                const scale = currentDistance / initialDistance;
+                const newZoom = Math.min(Math.max(0.1, initialZoom * scale), 10);
+                
+                // Forward transform to get new pan
+                _panX = (currentCenterX - canvasCenterX) / newZoom - (imageX - currentImage.naturalWidth / 2);
+                _panY = (currentCenterY - canvasCenterY) / newZoom - (imageY - currentImage.naturalHeight / 2);
+                _zoom = newZoom;
+            } else {
+                // Canvas mode - existing logic
+                const scale = currentDistance / initialDistance;
+                _zoom = Math.min(Math.max(0.1, initialZoom * scale), 10);
+                
+                // Update pan based on center point movement
+                const deltaX = currentCenterX - initialCenterX;
+                const deltaY = currentCenterY - initialCenterY;
+                _panX += deltaX;
+                _panY += deltaY;
+            }
             
             scheduleRedraw();
         } else if (e.touches.length === 1 && isTouchPanning) {
             e.preventDefault();
-            const currentTouchX = e.touches[0].clientX;
-            const currentTouchY = e.touches[0].clientY;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const currentTouchX = (e.touches[0].clientX - rect.left) * scaleX;
+            const currentTouchY = (e.touches[0].clientY - rect.top) * scaleY;
             
             if (config.viewMode === 'full') {
                 // In full mode, scale deltas by zoom level
