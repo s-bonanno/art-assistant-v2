@@ -80,8 +80,12 @@ function handleZoomFullMode(mouseX, mouseY, zoomFactor, currentImage) {
     const imageX = ((mouseX - canvasCenterX) / _zoom - _panX) + currentImage.naturalWidth / 2;
     const imageY = ((mouseY - canvasCenterY) / _zoom - _panY) + currentImage.naturalHeight / 2;
     
-    // Apply zoom
-    const newZoom = Math.min(Math.max(0.1, _zoom * zoomFactor), 10);
+    // Apply zoom with more flexible minimum zoom in full mode
+    const minZoom = Math.min(0.1, Math.min(
+        canvas.width / currentImage.naturalWidth,
+        canvas.height / currentImage.naturalHeight
+    ));
+    const newZoom = Math.min(Math.max(minZoom, _zoom * zoomFactor), 10);
     
     // Forward transform to get new pan
     // 1. Start with image position
@@ -115,7 +119,7 @@ function handleZoomCanvasMode(mouseX, mouseY, zoomFactor, currentImage, config) 
     const imageX = (mouseX - canvasCenterX - _panX) / (_zoom * scale);
     const imageY = (mouseY - canvasCenterY - _panY) / (_zoom * scale);
     
-    // Apply zoom
+    // Apply zoom with fixed minimum for canvas mode
     const newZoom = Math.min(Math.max(0.1, _zoom * zoomFactor), 10);
     
     // Forward transform to get new pan
@@ -170,7 +174,7 @@ export function initZoomPanListeners(canvas, currentImage, drawCanvas, config) {
             
             // Calculate initial distance and center point
             initialDistance = Math.hypot(touch2X - touch1X, touch2Y - touch1Y);
-            initialZoom = _zoom;
+            initialZoom = _zoom; // Store current zoom as initial zoom
             
             // Store initial center point
             initialCenterX = (touch1X + touch2X) / 2;
@@ -209,12 +213,16 @@ export function initZoomPanListeners(canvas, currentImage, drawCanvas, config) {
                 const canvasCenterY = canvas.height / 2;
                 
                 // Reverse transform stack to get image-relative position
-                const imageX = ((initialCenterX - canvasCenterX) / _zoom - _panX) + currentImage.naturalWidth / 2;
-                const imageY = ((initialCenterY - canvasCenterY) / _zoom - _panY) + currentImage.naturalHeight / 2;
+                const imageX = ((initialCenterX - canvasCenterX) / initialZoom - _panX) + currentImage.naturalWidth / 2;
+                const imageY = ((initialCenterY - canvasCenterY) / initialZoom - _panY) + currentImage.naturalHeight / 2;
                 
-                // Apply zoom
+                // Apply zoom with more flexible minimum zoom in full mode
+                const minZoom = Math.min(0.1, Math.min(
+                    canvas.width / currentImage.naturalWidth,
+                    canvas.height / currentImage.naturalHeight
+                ));
                 const scale = currentDistance / initialDistance;
-                const newZoom = Math.min(Math.max(0.1, initialZoom * scale), 10);
+                const newZoom = Math.min(Math.max(minZoom, initialZoom * scale), 10);
                 
                 // Forward transform to get new pan
                 _panX = (currentCenterX - canvasCenterX) / newZoom - (imageX - currentImage.naturalWidth / 2);
