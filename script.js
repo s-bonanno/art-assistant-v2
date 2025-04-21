@@ -448,8 +448,10 @@ function updateGridSpacing() {
         gridSizeValue.textContent = `${gridSquareSizeInput.value} ${unitSelect.value}`;
     }
     
-    // Redraw canvas
-    drawCanvas();
+    // Redraw canvas if an image is loaded
+    if (currentImage) {
+        drawCanvas();
+    }
 }
 
 // Event listeners for configuration changes
@@ -865,16 +867,22 @@ function drawCanvas() {
             // Ensure lines are drawn on pixel boundaries for crisp rendering
             ctx.translate(0.5, 0.5);
             
+            // Draw vertical lines
             for (let i = 0; i < numVerticalLines; i++) {
-                const x = Math.floor(i * gridSpacing);
-                ctx.moveTo(x, -0.5);
-                ctx.lineTo(x, config.canvasHeight - 0.5);
+                const x = i * gridSpacing;
+                // Ensure the last line is exactly at the right edge
+                const finalX = i === numVerticalLines - 1 ? config.canvasWidth - 0.5 : x;
+                ctx.moveTo(finalX, -0.5);
+                ctx.lineTo(finalX, config.canvasHeight - 0.5);
             }
             
+            // Draw horizontal lines
             for (let i = 0; i < numHorizontalLines; i++) {
-                const y = Math.floor(i * gridSpacing);
-                ctx.moveTo(-0.5, y);
-                ctx.lineTo(config.canvasWidth - 0.5, y);
+                const y = i * gridSpacing;
+                // Ensure the last line is exactly at the bottom edge
+                const finalY = i === numHorizontalLines - 1 ? config.canvasHeight - 0.5 : y;
+                ctx.moveTo(-0.5, finalY);
+                ctx.lineTo(config.canvasWidth - 0.5, finalY);
             }
             
             ctx.stroke();
