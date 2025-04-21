@@ -27,7 +27,7 @@ function haveFiltersChanged() {
     
     // Check enabled filters
     if (filters.posterise?.enabled !== filterCache.lastFilters.posterise?.enabled) return true;
-    if (filters.edgeDetection?.enabled !== filterCache.lastFilters.edgeDetection?.enabled) return true;
+    if (filters.edges?.enabled !== filterCache.lastFilters.edges?.enabled) return true;
     if (filters.lightSplit?.enabled !== filterCache.lastFilters.lightSplit?.enabled) return true;
     
     // Check light values
@@ -56,15 +56,15 @@ export function applyFilters(ctx, canvas, x, y, width, height) {
     
     // Apply filters in sequence
     if (filters.posterise && filters.posterise.enabled) {
-        applyPosteriseFilter(data, filters.posterise.levels);
+        applyPosterise(data, filters.posterise.levels);
     }
     
-    if (filters.edgeDetection && filters.edgeDetection.enabled) {
-        applyEdgeDetectionFilter(data, width, height);
+    if (filters.edges && filters.edges.enabled) {
+        applyEdgeDetection(data, width, height, filters.edges.strength, filters.edges.opacity);
     }
     
     if (filters.lightSplit && filters.lightSplit.enabled) {
-        applyLightSplitFilter(data, filters.lightSplit.threshold);
+        applyLightSplit(data, filters.lightSplit.shadow, filters.lightSplit.highlight);
     }
     
     // Apply light adjustments last
@@ -130,80 +130,57 @@ function applyLightAdjustments(data, lightValues) {
 }
 
 // Apply posterise filter
-function applyPosterise(ctx, canvas, levels) {
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
+function applyPosterise(data, levels) {
     const step = 255 / (levels - 1);
-
     for (let i = 0; i < data.length; i += 4) {
         data[i] = Math.round(data[i] / step) * step;     // R
         data[i + 1] = Math.round(data[i + 1] / step) * step; // G
         data[i + 2] = Math.round(data[i + 2] / step) * step; // B
     }
-
-    ctx.putImageData(imageData, 0, 0);
 }
 
 // Apply edge detection filter
-function applyEdgeDetection(ctx, canvas, strength, opacity) {
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
-    const width = canvas.width;
-    const height = canvas.height;
-    const output = new Uint8ClampedArray(data.length);
-
+function applyEdgeDetection(data, width, height, strength, opacity) {
+    // Create a copy of the data for the original image
+    const originalData = new Uint8ClampedArray(data);
+    
+    // Apply Sobel operator for edge detection
     for (let y = 1; y < height - 1; y++) {
         for (let x = 1; x < width - 1; x++) {
             const idx = (y * width + x) * 4;
             
-            // Sobel operator
-            let gx = 0;
-            let gy = 0;
+            // Calculate gradients using Sobel operator
+            let gx = 0, gy = 0;
             
-            for (let c = 0; c < 3; c++) {
-                const i = idx + c;
-                
-                // Horizontal gradient
-                gx += data[i - width * 4 - 4] * -1;
-                gx += data[i - width * 4 + 4] * 1;
-                gx += data[i - 4] * -2;
-                gx += data[i + 4] * 2;
-                gx += data[i + width * 4 - 4] * -1;
-                gx += data[i + width * 4 + 4] * 1;
-                
-                // Vertical gradient
-                gy += data[i - width * 4 - 4] * -1;
-                gy += data[i - width * 4] * -2;
-                gy += data[i - width * 4 + 4] * -1;
-                gy += data[i + width * 4 - 4] * 1;
-                gy += data[i + width * 4] * 2;
-                gy += data[i + width * 4 + 4] * 1;
-            }
-
+            // Horizontal gradient
+            gx += originalData[idx - width * 4 - 4] * -1;
+            gx += originalData[idx - width * 4 + 4] * 1;
+            gx += originalData[idx - 4] * -2;
+            gx += originalData[idx + 4] * 2;
+            gx += originalData[idx + width * 4 - 4] * -1;
+            gx += originalData[idx + width * 4 + 4] * 1;
+            
+            // Vertical gradient
+            gy += originalData[idx - width * 4 - 4] * -1;
+            gy += originalData[idx - width * 4] * -2;
+            gy += originalData[idx - width * 4 + 4] * -1;
+            gy += originalData[idx + width * 4 - 4] * 1;
+            gy += originalData[idx + width * 4] * 2;
+            gy += originalData[idx + width * 4 + 4] * 1;
+            
+            // Calculate magnitude
             const magnitude = Math.sqrt(gx * gx + gy * gy) * (strength / 2);
             
-            output[idx] = magnitude;     // R
-            output[idx + 1] = magnitude; // G
-            output[idx + 2] = magnitude; // B
-            output[idx + 3] = 255;       // A
+            // Apply edge detection with opacity
+            const edgeValue = Math.min(255, magnitude);
+            data[idx] = data[idx + 1] = data[idx + 2] = edgeValue;
+            data[idx + 3] = 255 * opacity;
         }
     }
-
-    // Blend the edge detection with the original image
-    for (let i = 0; i < data.length; i += 4) {
-        data[i] = data[i] * (1 - opacity) + output[i] * opacity;
-        data[i + 1] = data[i + 1] * (1 - opacity) + output[i + 1] * opacity;
-        data[i + 2] = data[i + 2] * (1 - opacity) + output[i + 2] * opacity;
-    }
-
-    ctx.putImageData(imageData, 0, 0);
 }
 
 // Apply light split filter
-function applyLightSplit(ctx, canvas, shadowThreshold, highlightThreshold) {
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
-
+function applyLightSplit(data, shadowThreshold, highlightThreshold) {
     for (let i = 0; i < data.length; i += 4) {
         // Calculate luminance
         const luminance = (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114) / 255;
@@ -222,11 +199,9 @@ function applyLightSplit(ctx, canvas, shadowThreshold, highlightThreshold) {
             data[i] = data[i + 1] = data[i + 2] = gray;
         }
     }
-
-    ctx.putImageData(imageData, 0, 0);
 }
 
-// Initialize filter event listeners
+// Initialize filter listeners
 export function initFilterListeners(drawCanvas) {
     // Light section toggle
     const lightSectionToggle = document.getElementById('lightSectionToggle');

@@ -2,7 +2,7 @@
 export const gridConfig = {
     lineWeight: undefined, // Will be set based on view mode
     opacity: undefined, // Will be set based on view mode
-    color: '#ffffff'
+    color: '#000000'
 };
 
 // Get grid styling elements
@@ -28,10 +28,10 @@ export function updateColorSwatchSelection() {
 // Set initial grid style values
 export function setDefaultGridStyle(viewMode) {
     // Set defaults based on view mode
-    gridConfig.lineWeight = viewMode === 'full' ? 1 : 0.5;
-    gridConfig.opacity = viewMode === 'full' ? 1 : 0.7;
+    gridConfig.lineWeight = 1;
+    gridConfig.opacity = 1;
     if (gridConfig.color === undefined) {
-        gridConfig.color = '#ffffff';
+        gridConfig.color = '#000000';
     }
     
     // Update UI elements
