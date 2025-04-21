@@ -411,21 +411,47 @@
                 <div class="space-y-2" id="canvasSizeControls">
                     <span class="text-xs text-zinc-400">Canvas Size</span>
                     <div class="flex items-center gap-2">
-                        <div class="flex items-center gap-2">
-                            <input type="number" id="canvasWidth" value="50" min="1" step="1"
-                                class="w-16 text-xs text-zinc-400 bg-zinc-850 border border-zinc-700 rounded-md px-2 py-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
-                            <span class="text-xs text-zinc-400">×</span>
-                            <input type="number" id="canvasHeight" value="50" min="1" step="1"
-                                class="w-16 text-xs text-zinc-400 bg-zinc-850 border border-zinc-700 rounded-md px-2 py-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
-                        </div>
+                        <select id="canvasSizePreset" class="w-32 text-xs text-zinc-400 bg-zinc-850 border border-zinc-700 rounded-md pl-2 pr-6 py-1.5 appearance-none hover:text-zinc-200 hover:border-zinc-600 focus:text-zinc-200">
+                            <option value="custom">Custom</option>
+                            <optgroup label="Standard Paper">
+                                <option value="a4">A4 (21.0 x 29.7 cm)</option>
+                                <option value="a3">A3 (29.7 x 42.0 cm)</option>
+                                <option value="a2">A2 (42.0 x 59.4 cm)</option>
+                            </optgroup>
+                            <optgroup label="Common Painting">
+                                <option value="small">Small (20 x 25 cm)</option>
+                                <option value="medium">Medium (30 x 40 cm)</option>
+                                <option value="large">Large (50 x 70 cm)</option>
+                            </optgroup>
+                            <optgroup label="Square">
+                                <option value="square-small">Small Square (20 x 20 cm)</option>
+                                <option value="square-medium">Medium Square (30 x 30 cm)</option>
+                                <option value="square-large">Large Square (50 x 50 cm)</option>
+                            </optgroup>
+                            <optgroup label="Widescreen">
+                                <option value="widescreen-landscape">16:9 Landscape (32 x 18 cm)</option>
+                                <option value="widescreen-portrait">16:9 Portrait (18 x 32 cm)</option>
+                                <option value="standard-landscape">4:3 Landscape (28 x 21 cm)</option>
+                                <option value="standard-portrait">4:3 Portrait (21 x 28 cm)</option>
+                            </optgroup>
+                            <optgroup label="Traditional">
+                                <option value="quarter-imperial">1/4 Imperial (22.9 x 30.5 cm)</option>
+                                <option value="half-imperial">1/2 Imperial (30.5 x 45.7 cm)</option>
+                                <option value="imperial">Imperial (45.7 x 61.0 cm)</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="number" id="canvasWidth" value="50" min="1" step="0.1"
+                            class="w-24 text-xs text-zinc-400 bg-zinc-850 border border-zinc-700 rounded-md px-2 py-1.5">
+                        <span class="text-xs text-zinc-400">x</span>
+                        <input type="number" id="canvasHeight" value="50" min="1" step="0.1"
+                            class="w-24 text-xs text-zinc-400 bg-zinc-850 border border-zinc-700 rounded-md px-2 py-1.5">
                         <div class="relative group">
-                            <select id="canvasUnitSelect" class="w-16 text-xs text-zinc-400 bg-zinc-850 border border-zinc-700 rounded-md pl-2 pr-6 py-1.5 appearance-none hover:text-zinc-200 hover:border-zinc-600 focus:text-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-zinc-400 disabled:hover:border-zinc-700">
+                            <select id="canvasUnitSelect" class="w-16 text-xs text-zinc-400 bg-zinc-850 border border-zinc-700 rounded-md pl-2 pr-6 py-1.5 appearance-none hover:text-zinc-200 hover:border-zinc-600 focus:text-zinc-200">
                                 <option value="cm">cm</option>
                                 <option value="in">in</option>
                             </select>
-                            <svg xmlns="http://www.w3.org/2000/svg" class="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 pointer-events-none text-zinc-400 group-hover:text-zinc-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                            </svg>
                         </div>
                     </div>
                 </div>

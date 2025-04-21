@@ -1060,4 +1060,52 @@ filterInputs.forEach(input => {
         filterCache.needsUpdate = true;
         drawCanvas();
     });
+});
+
+// Canvas size presets
+const canvasSizePresets = {
+    'a4': { width: 21.0, height: 29.7 },
+    'a3': { width: 29.7, height: 42.0 },
+    'a2': { width: 42.0, height: 59.4 },
+    'small': { width: 20.0, height: 25.0 },
+    'medium': { width: 30.0, height: 40.0 },
+    'large': { width: 50.0, height: 70.0 },
+    'square-small': { width: 20.0, height: 20.0 },
+    'square-medium': { width: 30.0, height: 30.0 },
+    'square-large': { width: 50.0, height: 50.0 },
+    'widescreen-landscape': { width: 32.0, height: 18.0 },
+    'widescreen-portrait': { width: 18.0, height: 32.0 },
+    'standard-landscape': { width: 28.0, height: 21.0 },
+    'standard-portrait': { width: 21.0, height: 28.0 },
+    'quarter-imperial': { width: 22.9, height: 30.5 },
+    'half-imperial': { width: 30.5, height: 45.7 },
+    'imperial': { width: 45.7, height: 61.0 }
+};
+
+// Add event listener for canvas size preset
+document.getElementById('canvasSizePreset').addEventListener('change', (e) => {
+    const preset = e.target.value;
+    if (preset === 'custom') return;
+    
+    const size = canvasSizePresets[preset];
+    if (size) {
+        // Update the width and height inputs
+        canvasWidthInput.value = size.width;
+        canvasHeightInput.value = size.height;
+        
+        // Update the config and redraw
+        config.canvasWidthCm = size.width;
+        config.canvasHeightCm = size.height;
+        updateCanvasSize();
+        drawCanvas();
+    }
+});
+
+// Add event listeners for width/height inputs to reset to custom
+canvasWidthInput.addEventListener('input', () => {
+    document.getElementById('canvasSizePreset').value = 'custom';
+});
+
+canvasHeightInput.addEventListener('input', () => {
+    document.getElementById('canvasSizePreset').value = 'custom';
 }); 
