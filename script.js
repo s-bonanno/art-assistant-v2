@@ -736,52 +736,51 @@ function drawCanvas() {
     // Draw image if one is loaded
     if (currentImage) {
         if (config.viewMode === 'full') {
-            // Set canvas dimensions to match image
+            // Full image mode - existing logic
             canvas.width = currentImage.naturalWidth;
             canvas.height = currentImage.naturalHeight;
             
-            // Save the current context state
             ctx.save();
-            
-            // Get the center of the canvas container
             const centerX = canvasContainer.clientWidth / 2;
             const centerY = canvasContainer.clientHeight / 2;
             
-            // Reset transform
             ctx.setTransform(1, 0, 0, 1, 0, 0);
-            
-            // Apply transforms in the correct order
             ctx.translate(centerX, centerY);
             ctx.scale(getZoom(), getZoom());
             ctx.translate(getPanX(), getPanY());
             ctx.translate(-currentImage.naturalWidth / 2, -currentImage.naturalHeight / 2);
             
+            // Use original image if zoomed to 100%, otherwise use preview
+            const sourceImage = getZoom() === 1 ? currentImage : previewImage;
+            
             // Check if we need to update the filter cache
             if (filterCache.needsUpdate || !filterCache.image || 
-                JSON.stringify(filters) !== JSON.stringify(filterCache.filters)) {
+                filterCache.width !== sourceImage.width || 
+                filterCache.height !== sourceImage.height) {
                 
-                // Create a temporary canvas for the image and filters
                 const tempCanvas = document.createElement('canvas');
                 const tempCtx = tempCanvas.getContext('2d');
                 
-                // Use original image if zoomed to 100%, otherwise use preview
-                const sourceImage = getZoom() === 1 ? currentImage : previewImage;
                 tempCanvas.width = sourceImage.width;
                 tempCanvas.height = sourceImage.height;
-
-                // Draw the image to temp canvas
                 tempCtx.drawImage(sourceImage, 0, 0);
-
-                // Apply filters to temp canvas
-                applyFilters(tempCtx, tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
-
-                // Cache the filtered result
+                
+                // Only apply filters if any are active
+                const hasActiveFilters = Object.values(filters).some(f => 
+                    (f.enabled !== undefined && f.enabled) || 
+                    (f.exposure !== undefined && (f.exposure !== 0 || f.contrast !== 0 || f.highlights !== 0 || f.shadows !== 0))
+                );
+                
+                if (hasActiveFilters) {
+                    applyFilters(tempCtx, tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
+                }
+                
                 filterCache.image = tempCanvas;
-                filterCache.filters = JSON.parse(JSON.stringify(filters));
+                filterCache.width = sourceImage.width;
+                filterCache.height = sourceImage.height;
                 filterCache.needsUpdate = false;
             }
-
-            // Draw the cached filtered image to the main canvas
+            
             ctx.drawImage(filterCache.image, 0, 0, currentImage.naturalWidth, currentImage.naturalHeight);
             
             // Draw grid
@@ -790,27 +789,21 @@ function drawCanvas() {
             ctx.globalAlpha = gridConfig.opacity;
             ctx.lineWidth = gridConfig.lineWeight;
             
-            // Calculate grid spacing in pixels
             const gridSpacing = config.gridSpacing;
-            
-            // Draw vertical lines
             for (let x = 0; x <= canvas.width; x += gridSpacing) {
                 ctx.moveTo(x, 0);
                 ctx.lineTo(x, canvas.height);
             }
             
-            // Draw horizontal lines
             for (let y = 0; y <= canvas.height; y += gridSpacing) {
                 ctx.moveTo(0, y);
                 ctx.lineTo(canvas.width, y);
             }
             
             ctx.stroke();
-            
-            // Restore the context state
             ctx.restore();
         } else {
-            // Canvas mode - existing logic
+            // Canvas mode - optimized logic
             const scale = Math.min(
                 config.canvasWidth / currentImage.width,
                 config.canvasHeight / currentImage.height
@@ -826,20 +819,35 @@ function drawCanvas() {
             const x = centerX + getPanX();
             const y = centerY + getPanY();
             
-            // Create a temporary canvas for the image and filters
-            const tempCanvas = document.createElement('canvas');
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCanvas.width = finalWidth;
-            tempCanvas.height = finalHeight;
-
-            // Draw the scaled image to temp canvas
-            tempCtx.drawImage(currentImage, 0, 0, finalWidth, finalHeight);
-
-            // Apply filters to temp canvas
-            applyFilters(tempCtx, tempCanvas, 0, 0, finalWidth, finalHeight);
-
-            // Draw the filtered image to the main canvas at the correct position
-            ctx.drawImage(tempCanvas, x, y);
+            // Check if we need to update the filter cache
+            if (filterCache.needsUpdate || !filterCache.image || 
+                filterCache.width !== finalWidth || 
+                filterCache.height !== finalHeight) {
+                
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                
+                tempCanvas.width = finalWidth;
+                tempCanvas.height = finalHeight;
+                tempCtx.drawImage(currentImage, 0, 0, finalWidth, finalHeight);
+                
+                // Only apply filters if any are active
+                const hasActiveFilters = Object.values(filters).some(f => 
+                    (f.enabled !== undefined && f.enabled) || 
+                    (f.exposure !== undefined && (f.exposure !== 0 || f.contrast !== 0 || f.highlights !== 0 || f.shadows !== 0))
+                );
+                
+                if (hasActiveFilters) {
+                    applyFilters(tempCtx, tempCanvas, 0, 0, finalWidth, finalHeight);
+                }
+                
+                filterCache.image = tempCanvas;
+                filterCache.width = finalWidth;
+                filterCache.height = finalHeight;
+                filterCache.needsUpdate = false;
+            }
+            
+            ctx.drawImage(filterCache.image, x, y);
             
             // Draw grid
             ctx.beginPath();
@@ -848,7 +856,6 @@ function drawCanvas() {
             
             // Calculate preview scale based on current canvas size vs export size
             const previewScale = config.canvasWidth / EXPORT_SIZE;
-            // Apply line width scaling consistently
             ctx.lineWidth = Math.max(0.5, gridConfig.lineWeight * previewScale);
             
             const gridSpacing = config.gridSpacing;
