@@ -172,6 +172,10 @@ function updateCanvasSize() {
     
     // Trigger resize to fit
     resizeCanvasToFit();
+    
+    // Update grid size and limits after canvas size change
+    setDefaultGridSize();
+    updateGridSizeLimits();
 }
 
 // Add window resize handler with debounce
@@ -290,9 +294,6 @@ function updateGridSizeLimits() {
     gridSizeSlider.max = gridSizeLimits.max;
     gridSizeSlider.step = config.viewMode === 'full' ? '1' : '0.1';
     
-    // Update input step
-    gridSizeSlider.step = config.viewMode === 'full' ? '1' : '0.1';
-    
     // If current grid size is outside new limits, adjust it
     if (config.viewMode === 'full') {
         if (config.gridSpacing < gridSizeLimits.min) {
@@ -309,8 +310,23 @@ function updateGridSizeLimits() {
         } else if (currentSizeCm > parseFloat(gridSizeLimits.max)) {
             config.gridSizeCm = parseFloat(gridSizeLimits.max);
         }
+        
+        // Update slider value
         gridSizeSlider.value = config.gridSizeCm;
-        gridSizeValue.textContent = `${config.gridSizeCm} cm`;
+        
+        // Update display value based on selected unit
+        const unit = unitSelect.value;
+        const displayValue = unit === 'in' ? 
+            (config.gridSizeCm / CM_PER_INCH).toFixed(2) : 
+            config.gridSizeCm.toFixed(1);
+        gridSizeValue.textContent = `${displayValue} ${unit}`;
+        
+        // Update input field value
+        gridSquareSizeInput.value = displayValue;
+        
+        // Recalculate grid spacing with current dimensions
+        const pixelsPerCm = config.canvasWidth / config.canvasWidthCm;
+        config.gridSpacing = config.gridSizeCm * pixelsPerCm;
     }
 }
 
