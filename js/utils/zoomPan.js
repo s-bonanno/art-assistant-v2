@@ -65,16 +65,76 @@ export function zoomTo100(currentImage, drawCanvas, config) {
     drawCanvas();
 }
 
-export function initZoomPanListeners(canvas, currentImage, drawCanvas) {
+export function initZoomPanListeners(canvas, currentImage, drawCanvas, config) {
     _drawCanvas = drawCanvas;
+    
+    console.log('Initializing zoom pan listeners');
+    console.log('Canvas:', canvas);
+    console.log('Current image:', currentImage);
+    
     // Mouse wheel zoom handler
     canvas.addEventListener('wheel', (e) => {
         e.preventDefault();
         if (!currentImage) return;
 
-        const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-        _zoom *= zoomFactor;
-        _zoom = Math.min(Math.max(0.1, _zoom), 10);
+        // Get mouse position relative to canvas container
+        const containerRect = canvas.parentElement.getBoundingClientRect();
+        const mouseX = e.clientX - containerRect.left;
+        const mouseY = e.clientY - containerRect.top;
+
+        // Get container center
+        const centerX = containerRect.width / 2;
+        const centerY = containerRect.height / 2;
+
+        if (config.viewMode === 'full') {
+            // Full image mode
+            console.log('Mouse position:', { mouseX, mouseY });
+            console.log('Container center:', { centerX, centerY });
+            console.log('Current pan:', { panX: _panX, panY: _panY });
+            console.log('Current zoom:', _zoom);
+
+            // Calculate the point in image space before zoom
+            const imageX = (mouseX - centerX - _panX) / _zoom;
+            const imageY = (mouseY - centerY - _panY) / _zoom;
+            console.log('Point in image space:', { imageX, imageY });
+
+            // Apply zoom
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+            const newZoom = Math.min(Math.max(0.1, _zoom * zoomFactor), 10);
+            console.log('New zoom:', newZoom);
+            
+            // Calculate new pan to keep the point under the cursor fixed
+            _panX = mouseX - centerX - (imageX * newZoom);
+            _panY = mouseY - centerY - (imageY * newZoom);
+            
+            console.log('New pan:', { newPanX: _panX, newPanY: _panY });
+            _zoom = newZoom;
+        } else {
+            // Canvas mode
+            const scale = Math.min(
+                config.canvasWidth / currentImage.width,
+                config.canvasHeight / currentImage.height
+            );
+            
+            const baseWidth = currentImage.width * scale;
+            const baseHeight = currentImage.height * scale;
+            const canvasCenterX = (config.canvasWidth - baseWidth) / 2;
+            const canvasCenterY = (config.canvasHeight - baseHeight) / 2;
+            
+            // Calculate the point in image space before zoom
+            const imageX = (mouseX - canvasCenterX - _panX) / (_zoom * scale);
+            const imageY = (mouseY - canvasCenterY - _panY) / (_zoom * scale);
+            
+            // Apply zoom
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+            const newZoom = Math.min(Math.max(0.1, _zoom * zoomFactor), 10);
+            
+            // Calculate new pan to keep the point under the cursor fixed
+            _panX = mouseX - canvasCenterX - (imageX * newZoom * scale);
+            _panY = mouseY - canvasCenterY - (imageY * newZoom * scale);
+            
+            _zoom = newZoom;
+        }
         
         scheduleRedraw();
     });

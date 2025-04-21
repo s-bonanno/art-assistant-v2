@@ -255,7 +255,22 @@ initGridStyleListeners(drawCanvas);
 initFilterListeners(drawCanvas);
 
 // Initialize zoom and pan listeners
-initZoomPanListeners(canvas, currentImage, drawCanvas);
+let zoomPanInitialized = false;
+
+function initializeZoomPan() {
+    if (currentImage && !zoomPanInitialized) {
+        initZoomPanListeners(canvas, currentImage, drawCanvas, config);
+        zoomPanInitialized = true;
+    }
+}
+
+// Call this when loading a new image
+function onImageLoaded(img) {
+    currentImage = img;
+    zoomPanInitialized = false;
+    initializeZoomPan();
+    drawCanvas();
+}
 
 // Add fit to canvas functionality
 function fitToCanvas() {
@@ -405,7 +420,7 @@ imageInput.addEventListener('change', (e) => {
         reader.onload = (event) => {
             const img = new Image();
             img.onload = () => {
-                currentImage = img;
+                onImageLoaded(img);
                 // Create preview version
                 previewImage = createPreviewImage(img);
                 // Reset transform when loading new image
@@ -509,45 +524,6 @@ unitSelect.addEventListener('change', () => {
         
         updateGridSpacing();
     }
-});
-
-// Mouse wheel zoom handler
-canvas.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    if (!currentImage) return;
-
-    // Get mouse position relative to canvas
-    const rect = canvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    // Calculate the point in image coordinates
-    const scale = Math.min(
-        config.canvasWidth / currentImage.width,
-        config.canvasHeight / currentImage.height
-    );
-    const baseWidth = currentImage.width * scale;
-    const baseHeight = currentImage.height * scale;
-    const centerX = (config.canvasWidth - baseWidth) / 2;
-    const centerY = (config.canvasHeight - baseHeight) / 2;
-
-    // Convert mouse position to image coordinates
-    const imageX = (mouseX - centerX - getPanX()) / getZoom();
-    const imageY = (mouseY - centerY - getPanY()) / getZoom();
-
-    // Calculate new zoom
-    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-    const newZoom = Math.min(Math.max(0.1, getZoom() * zoomFactor), 10);
-
-    // Calculate new pan to keep the point under the mouse fixed
-    const newPanX = mouseX - centerX - imageX * newZoom;
-    const newPanY = mouseY - centerY - imageY * newZoom;
-
-    setZoom(newZoom);
-    setPanX(newPanX);
-    setPanY(newPanY);
-    
-    drawCanvas();
 });
 
 // Touch gesture handling
