@@ -103,27 +103,27 @@ function updateCanvasUnitDisplay() {
 }
 
 function resizeCanvasToFit() {
-    const container = document.querySelector('.relative.w-full');
+    const container = document.querySelector('.relative.w-full') || document.body;
     const canvas = document.getElementById('canvas');
     
     // Get the canvas wrapper element
-    const canvasWrapper = container.querySelector('.p-4');
-    
+    const canvasWrapper = container.querySelector('.p-4') || container;
+
     // Get available viewport dimensions
     const maxWidth = container.clientWidth;
     const maxHeight = container.clientHeight;
-    
+
     let width, height;
-    
+
     if (config.viewMode === 'full' && currentImage) {
-        // In full image mode, set canvas to match image dimensions
+        // Set canvas drawing size to match image resolution
         canvas.width = currentImage.naturalWidth;
         canvas.height = currentImage.naturalHeight;
-        
+
         // Calculate display dimensions while maintaining aspect ratio
         const imageAspectRatio = currentImage.naturalHeight / currentImage.naturalWidth;
         const availableAspectRatio = maxHeight / maxWidth;
-        
+
         if (imageAspectRatio > availableAspectRatio) {
             // Height is limiting factor
             height = maxHeight;
@@ -133,11 +133,15 @@ function resizeCanvasToFit() {
             width = maxWidth;
             height = width * imageAspectRatio;
         }
+
+        // Apply CSS display size
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
     } else {
-        // Canvas mode - existing logic
+        // Canvas mode - determine canvas size based on configured dimensions
         const canvasAspectRatio = config.canvasHeightCm / config.canvasWidthCm;
         const availableAspectRatio = maxHeight / maxWidth;
-        
+
         if (canvasAspectRatio > availableAspectRatio) {
             height = maxHeight;
             width = height / canvasAspectRatio;
@@ -145,22 +149,26 @@ function resizeCanvasToFit() {
             width = maxWidth;
             height = width * canvasAspectRatio;
         }
-        
-        // Set canvas dimensions
+
+        // Set canvas drawing size
         canvas.width = width;
         canvas.height = height;
-        
-        // Update config with new dimensions
+
+        // Set CSS size explicitly in pixels
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+
+        // Update config with current pixel dimensions
         config.canvasWidth = width;
         config.canvasHeight = height;
     }
-    
+
     // Recalculate grid spacing
     updateGridSpacing();
-    
+
     // Update grid size limits after resizing
     updateGridSizeLimits();
-    
+
     // Redraw canvas
     drawCanvas();
 }
