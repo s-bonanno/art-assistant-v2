@@ -26,7 +26,7 @@ const MAX_CANVAS_DIMENSION = 1000; // Maximum canvas dimension in pixels
 const EXPORT_SIZE = 2400; // Size of the exported image
 const CM_PER_INCH = 2.54; // Conversion factor for inches to centimeters
 import { convertToUnit, convertFromUnit } from './js/utils/unitConversion.js';
-import { gridConfig, updateColorSwatchSelection, setDefaultGridStyle, initGridStyleListeners } from './js/utils/gridStyle.js';
+import { gridConfig, updateColorSwatchSelection, setDefaultGridStyle, initGridStyleListeners, getCurrentGridType } from './js/utils/gridStyle.js';
 import { filters, filterCache, applyFilters, initFilterListeners } from './js/utils/filters.js';
 import { getZoom, setZoom, getPanX, setPanX, getPanY, setPanY, resetZoomAndPan, zoomTo100, initZoomPanListeners, calculateGridSizeLimits } from './js/utils/zoomPan.js';
 
@@ -766,26 +766,27 @@ exportBtn.addEventListener('click', () => {
         // Draw the filtered image to export canvas
         exportCtx.drawImage(tempCanvas, 0, 0);
         
-        // Draw high-resolution grid with styling
-        exportCtx.beginPath();
-        exportCtx.strokeStyle = gridConfig.color;
-        exportCtx.globalAlpha = gridConfig.opacity;
-        exportCtx.lineWidth = gridConfig.lineWeight;
-        
-        // Draw vertical lines
-        const gridSpacing = config.gridSpacing;
-        for (let x = 0; x <= exportCanvas.width; x += gridSpacing) {
-            exportCtx.moveTo(x, 0);
-            exportCtx.lineTo(x, exportCanvas.height);
+        // Draw grid using current grid type
+        const gridType = getCurrentGridType();
+        if (gridType) {
+            exportCtx.save();
+            
+            // Set up grid styling
+            exportCtx.strokeStyle = gridConfig.color;
+            exportCtx.globalAlpha = gridConfig.opacity;
+            exportCtx.lineWidth = gridConfig.lineWeight;
+            
+            // Draw grid using the current grid type
+            const dimensions = {
+                width: exportCanvas.width,
+                height: exportCanvas.height,
+                gridSpacing: config.gridSpacing
+            };
+            gridType.draw(exportCtx, gridConfig, dimensions);
+            
+            exportCtx.restore();
         }
         
-        // Draw horizontal lines
-        for (let y = 0; y <= exportCanvas.height; y += gridSpacing) {
-            exportCtx.moveTo(0, y);
-            exportCtx.lineTo(exportCanvas.width, y);
-        }
-        
-        exportCtx.stroke();
         exportCtx.globalAlpha = 1; // Reset opacity
     } else {
         // Canvas mode - existing export logic
@@ -838,26 +839,27 @@ exportBtn.addEventListener('click', () => {
         // Draw the filtered image to export canvas
         exportCtx.drawImage(tempCanvas, x, y);
         
-        // Draw high-resolution grid with styling
-        exportCtx.beginPath();
-        exportCtx.strokeStyle = gridConfig.color;
-        exportCtx.globalAlpha = gridConfig.opacity;
-        exportCtx.lineWidth = gridConfig.lineWeight;
-        
-        // Draw vertical lines
-        const exportGridSpacing = config.gridSpacing * scaleFactor;
-        for (let x = 0; x <= exportCanvas.width; x += exportGridSpacing) {
-            exportCtx.moveTo(x, 0);
-            exportCtx.lineTo(x, exportCanvas.height);
+        // Draw grid using current grid type
+        const gridType = getCurrentGridType();
+        if (gridType) {
+            exportCtx.save();
+            
+            // Set up grid styling
+            exportCtx.strokeStyle = gridConfig.color;
+            exportCtx.globalAlpha = gridConfig.opacity;
+            exportCtx.lineWidth = gridConfig.lineWeight;
+            
+            // Draw grid using the current grid type
+            const dimensions = {
+                width: exportCanvas.width,
+                height: exportCanvas.height,
+                gridSpacing: config.gridSpacing * scaleFactor
+            };
+            gridType.draw(exportCtx, gridConfig, dimensions);
+            
+            exportCtx.restore();
         }
         
-        // Draw horizontal lines
-        for (let y = 0; y <= exportCanvas.height; y += exportGridSpacing) {
-            exportCtx.moveTo(0, y);
-            exportCtx.lineTo(exportCanvas.width, y);
-        }
-        
-        exportCtx.stroke();
         exportCtx.globalAlpha = 1; // Reset opacity
     }
     
@@ -932,23 +934,17 @@ function drawCanvas() {
             // Draw final filtered image
             ctx.drawImage(filterCache.image, 0, 0, currentImage.naturalWidth, currentImage.naturalHeight);
 
-            // Draw grid
-            ctx.beginPath();
-            ctx.strokeStyle = gridConfig.color;
-            ctx.globalAlpha = gridConfig.opacity;
-            ctx.lineWidth = gridConfig.lineWeight;
-
-            const gridSpacing = config.gridSpacing;
-            for (let x = 0; x <= currentImage.naturalWidth; x += gridSpacing) {
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, currentImage.naturalHeight);
-            }
-            for (let y = 0; y <= currentImage.naturalHeight; y += gridSpacing) {
-                ctx.moveTo(0, y);
-                ctx.lineTo(currentImage.naturalWidth, y);
+            // Draw grid using the current grid type
+            const gridType = getCurrentGridType();
+            if (gridType) {
+                const dimensions = {
+                    width: currentImage.naturalWidth,
+                    height: currentImage.naturalHeight,
+                    gridSpacing: config.gridSpacing
+                };
+                gridType.draw(ctx, gridConfig, dimensions);
             }
 
-            ctx.stroke();
             ctx.restore();
         } else {
             // Canvas mode - optimized logic
@@ -997,42 +993,21 @@ function drawCanvas() {
             
             ctx.drawImage(filterCache.image, x, y);
             
-            // Draw grid
-            ctx.beginPath();
-            ctx.strokeStyle = gridConfig.color;
-            ctx.globalAlpha = gridConfig.opacity;
-            
-            // Calculate preview scale based on current canvas size vs export size
-            const previewScale = config.canvasWidth / EXPORT_SIZE;
-            ctx.lineWidth = Math.max(0.5, gridConfig.lineWeight * previewScale);
-            
-            const gridSpacing = config.gridSpacing;
-            const numVerticalLines = Math.ceil(config.canvasWidth / gridSpacing) + 1;
-            const numHorizontalLines = Math.ceil(config.canvasHeight / gridSpacing) + 1;
-            
-            // Ensure lines are drawn on pixel boundaries for crisp rendering
-            ctx.translate(0.5, 0.5);
-            
-            // Draw vertical lines
-            for (let i = 0; i < numVerticalLines; i++) {
-                const x = i * gridSpacing;
-                // Ensure the last line is exactly at the right edge
-                const finalX = i === numVerticalLines - 1 ? config.canvasWidth - 0.5 : x;
-                ctx.moveTo(finalX, -0.5);
-                ctx.lineTo(finalX, config.canvasHeight - 0.5);
+            // Draw grid using the current grid type
+            const gridType = getCurrentGridType();
+            if (gridType) {
+                // Ensure lines are drawn on pixel boundaries for crisp rendering
+                ctx.translate(0.5, 0.5);
+                
+                const dimensions = {
+                    width: config.canvasWidth,
+                    height: config.canvasHeight,
+                    gridSpacing: config.gridSpacing
+                };
+                gridType.draw(ctx, gridConfig, dimensions);
+                
+                ctx.translate(-0.5, -0.5);
             }
-            
-            // Draw horizontal lines
-            for (let i = 0; i < numHorizontalLines; i++) {
-                const y = i * gridSpacing;
-                // Ensure the last line is exactly at the bottom edge
-                const finalY = i === numHorizontalLines - 1 ? config.canvasHeight - 0.5 : y;
-                ctx.moveTo(-0.5, finalY);
-                ctx.lineTo(config.canvasWidth - 0.5, finalY);
-            }
-            
-            ctx.stroke();
-            ctx.translate(-0.5, -0.5);
         }
     }
     

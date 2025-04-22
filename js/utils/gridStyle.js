@@ -1,8 +1,11 @@
-// Grid styling configuration
+import { gridTypes } from './gridTypes.js';
+
+// Grid configuration state
 export const gridConfig = {
-    lineWeight: undefined, // Will be set based on view mode
-    opacity: undefined, // Will be set based on view mode
-    color: '#000000'
+    color: '#000000',
+    opacity: 0.5,
+    lineWeight: 1,
+    type: 'square' // Default to square grid
 };
 
 // Get grid styling elements
@@ -12,59 +15,90 @@ const gridOpacity = document.getElementById('gridOpacity');
 const gridOpacityValue = document.getElementById('gridOpacityValue');
 const colorSwatches = document.querySelectorAll('[data-color]');
 
-// Update color swatch selection
-export function updateColorSwatchSelection() {
-    colorSwatches.forEach(swatch => {
-        if (swatch.dataset.color === gridConfig.color) {
-            swatch.classList.add('border-indigo-500');
-            swatch.classList.remove('border-zinc-700');
-        } else {
-            swatch.classList.remove('border-indigo-500');
-            swatch.classList.add('border-zinc-700');
-        }
+// Update grid controls visibility based on type
+function updateGridControlsVisibility(gridType) {
+    const controls = document.querySelectorAll('.grid-control');
+    controls.forEach(control => {
+        control.style.display = gridType === 'none' ? 'none' : 'block';
     });
 }
 
-// Set initial grid style values
+// Update color swatch selection
+export function updateColorSwatchSelection(selectedButton) {
+    // Remove selected state from all swatches
+    document.querySelectorAll('[data-color]').forEach(button => {
+        button.classList.remove('border-indigo-500');
+        button.classList.add('border-zinc-700');
+    });
+
+    // Add selected state to clicked swatch
+    selectedButton.classList.remove('border-zinc-700');
+    selectedButton.classList.add('border-indigo-500');
+}
+
+// Set default grid style based on view mode
 export function setDefaultGridStyle(viewMode) {
-    // Set defaults based on view mode
-    gridConfig.lineWeight = 1;
-    gridConfig.opacity = 1;
-    if (gridConfig.color === undefined) {
-        gridConfig.color = '#000000';
+    if (viewMode === 'full') {
+        gridConfig.opacity = 0.5;
+        gridConfig.lineWeight = 1;
+    } else {
+        gridConfig.opacity = 0.5;
+        gridConfig.lineWeight = 1;
     }
-    
-    // Update UI elements
-    gridLineWeight.value = gridConfig.lineWeight;
-    gridLineWeightValue.textContent = `${gridConfig.lineWeight}px`;
-    gridOpacity.value = gridConfig.opacity;
-    gridOpacityValue.textContent = `${Math.round(gridConfig.opacity * 100)}%`;
-    
-    updateColorSwatchSelection();
+
+    // Initialize grid type dropdown if it exists
+    const gridTypeSelect = document.getElementById('gridType');
+    if (gridTypeSelect) {
+        gridTypeSelect.value = gridConfig.type;
+        updateGridControlsVisibility(gridConfig.type);
+    }
 }
 
 // Initialize grid style event listeners
 export function initGridStyleListeners(drawCanvas) {
-    // Update grid line weight
-    gridLineWeight.addEventListener('input', () => {
-        gridConfig.lineWeight = parseFloat(gridLineWeight.value);
-        gridLineWeightValue.textContent = `${gridConfig.lineWeight}px`;
-        drawCanvas();
-    });
+    // Grid type selection
+    const gridTypeSelect = document.getElementById('gridType');
+    if (gridTypeSelect) {
+        // Set initial value
+        gridTypeSelect.value = gridConfig.type;
+        updateGridControlsVisibility(gridConfig.type);
 
-    // Update grid opacity
-    gridOpacity.addEventListener('input', () => {
-        gridConfig.opacity = parseFloat(gridOpacity.value);
-        gridOpacityValue.textContent = `${Math.round(gridConfig.opacity * 100)}%`;
-        drawCanvas();
-    });
+        gridTypeSelect.addEventListener('change', (e) => {
+            gridConfig.type = e.target.value;
+            updateGridControlsVisibility(gridConfig.type);
+            drawCanvas();
+        });
+    }
 
-    // Handle color swatch clicks
-    colorSwatches.forEach(swatch => {
-        swatch.addEventListener('click', () => {
-            gridConfig.color = swatch.dataset.color;
-            updateColorSwatchSelection();
+    // Grid line weight slider
+    if (gridLineWeight && gridLineWeightValue) {
+        gridLineWeight.addEventListener('input', (e) => {
+            gridConfig.lineWeight = parseFloat(e.target.value);
+            gridLineWeightValue.textContent = `${gridConfig.lineWeight}px`;
+            drawCanvas();
+        });
+    }
+
+    // Grid opacity slider
+    if (gridOpacity && gridOpacityValue) {
+        gridOpacity.addEventListener('input', (e) => {
+            gridConfig.opacity = parseFloat(e.target.value);
+            gridOpacityValue.textContent = `${Math.round(gridConfig.opacity * 100)}%`;
+            drawCanvas();
+        });
+    }
+
+    // Grid color swatches
+    document.querySelectorAll('[data-color]').forEach(button => {
+        button.addEventListener('click', (e) => {
+            gridConfig.color = e.target.dataset.color;
+            updateColorSwatchSelection(e.target);
             drawCanvas();
         });
     });
+}
+
+// Export the current grid type
+export function getCurrentGridType() {
+    return gridTypes[gridConfig.type];
 } 
