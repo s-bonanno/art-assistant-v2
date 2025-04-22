@@ -116,13 +116,17 @@ function resizeCanvasToFit() {
     let width, height;
 
 if (config.viewMode === 'full' && currentImage) {
-    // Set canvas resolution to match the full image size
-    canvas.width = currentImage.naturalWidth;
-    canvas.height = currentImage.naturalHeight;
+    // Get available screen space
+    const displayWidth = window.innerWidth;
+    const displayHeight = window.innerHeight;
 
-    // Set CSS display size to match the available container (stretch to fill)
-    canvas.style.width = `${maxWidth}px`;
-    canvas.style.height = `${maxHeight}px`;
+    // Set canvas CSS size
+    canvas.style.width = `${displayWidth}px`;
+    canvas.style.height = `${displayHeight}px`;
+
+    // Set canvas drawing buffer size to match
+    canvas.width = displayWidth;
+    canvas.height = displayHeight;
 } else {
         // Canvas mode - determine canvas size based on configured dimensions
         const canvasAspectRatio = config.canvasHeightCm / config.canvasWidthCm;
