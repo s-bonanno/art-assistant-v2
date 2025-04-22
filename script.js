@@ -26,7 +26,7 @@ const MAX_CANVAS_DIMENSION = 1000; // Maximum canvas dimension in pixels
 const EXPORT_SIZE = 2400; // Size of the exported image
 const CM_PER_INCH = 2.54; // Conversion factor for inches to centimeters
 import { convertToUnit, convertFromUnit } from './js/utils/unitConversion.js';
-import { gridConfig, updateColorSwatchSelection, setDefaultGridStyle, initGridStyleListeners, getCurrentGridType } from './js/utils/gridStyle.js';
+import { gridConfig, updateColorSwatchSelection, setDefaultGridStyle, initGridStyleListeners, getCurrentGridType, updateGridPreview } from './js/utils/gridStyle.js';
 import { filters, filterCache, applyFilters, initFilterListeners } from './js/utils/filters.js';
 import { getZoom, setZoom, getPanX, setPanX, getPanY, setPanY, resetZoomAndPan, zoomTo100, initZoomPanListeners, calculateGridSizeLimits } from './js/utils/zoomPan.js';
 
@@ -1015,16 +1015,28 @@ function drawCanvas() {
 }
 
 // Initial setup
-updateCanvasUnitDisplay();
-// Set initial grid spacing to 5px in full mode
-config.gridSpacing = 5;
-// Set default grid style for initial render
-setDefaultGridStyle(config.viewMode);
-updateGridSpacing();
-updateCanvasSize();
-
-// Initial resize
-window.addEventListener('load', () => {
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize canvas unit display
+    updateCanvasUnitDisplay();
+    
+    // Set initial grid spacing to 5px in full mode
+    config.gridSpacing = 5;
+    
+    // Set default grid style for initial render
+    setDefaultGridStyle(config.viewMode);
+    
+    // Update grid spacing and canvas size
+    updateGridSpacing();
+    updateCanvasSize();
+    
+    // Initialize grid style listeners and update preview
+    initGridStyleListeners(drawCanvas);
+    updateGridPreview();
+    
+    // Update grid controls visibility
+    updateGridControlsVisibility(gridConfig.type);
+    
+    // Initial resize
     resizeCanvasToFit();
 });
 
@@ -1086,6 +1098,8 @@ document.addEventListener('DOMContentLoaded', () => {
         cropToCanvasBtn.addEventListener('click', () => updateViewMode(false));
         updateViewMode(false); // Initialize with Crop to Canvas mode
     }
+    updateGridPreview();
+    updateGridControlsVisibility(gridConfig.type);
 });
 
 // Add event listeners for filter changes
@@ -1128,4 +1142,117 @@ function updateOrientation() {
         landscapeBtn.setAttribute('data-active', isLandscape);
         portraitBtn.setAttribute('data-active', !isLandscape);
     }
+}
+
+// Update grid controls visibility based on type
+function updateGridControlsVisibility(gridType) {
+    const controls = document.querySelectorAll('[data-grid-control="square-only"]');
+    controls.forEach(control => {
+        // Only show size controls for square grid
+        control.style.display = gridType === 'square' ? 'block' : 'none';
+    });
+}
+
+// Modify the grid type change handler
+const gridTypeSelect = document.getElementById('gridType');
+if (gridTypeSelect) {
+    gridTypeSelect.addEventListener('change', (e) => {
+        gridConfig.type = e.target.value;
+        updateGridControlsVisibility(gridConfig.type);
+        drawCanvas();
+    });
+}
+
+// Grid type definitions
+const gridTypes = {
+    square: {
+        name: 'Square',
+        draw: (ctx, config, dimensions) => {
+            const spacing = dimensions.gridSpacing || config.spacing;
+            for (let x = 0; x <= dimensions.width; x += spacing) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, dimensions.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y <= dimensions.height; y += spacing) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(dimensions.width, y);
+                ctx.stroke();
+            }
+        }
+    },
+    diagonal: {
+        name: 'Diagonal',
+        draw: (ctx, config, dimensions) => {
+            const spacing = 8; // Fixed spacing for diagonal
+            for (let x = -dimensions.height; x < dimensions.width; x += spacing) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x + dimensions.height, dimensions.height);
+                ctx.stroke();
+            }
+            for (let x = 0; x < dimensions.width + dimensions.height; x += spacing) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x - dimensions.height, dimensions.height);
+                ctx.stroke();
+            }
+        }
+    },
+    isometric: {
+        name: 'Isometric',
+        draw: (ctx, config, dimensions) => {
+            const spacing = 8; // Fixed spacing for isometric
+            const height30 = dimensions.height * Math.sqrt(3) / 2;
+            
+            // Vertical lines
+            for (let x = 0; x <= dimensions.width; x += spacing) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, dimensions.height);
+                ctx.stroke();
+            }
+            
+            // 30-degree lines
+            for (let y = -dimensions.width; y < dimensions.height; y += spacing) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(dimensions.width, y + height30);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(0, y + height30);
+                ctx.lineTo(dimensions.width, y);
+                ctx.stroke();
+            }
+        }
+    }
+};
+
+function drawGrid() {
+    if (!config.showGrid) return;
+
+    const gridType = getCurrentGridType();
+    if (!gridType) return;
+
+    ctx.save();
+    
+    // Reset transform to draw grid in screen space
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    
+    // Set up grid style
+    ctx.strokeStyle = gridConfig.color;
+    ctx.globalAlpha = gridConfig.opacity;
+    ctx.lineWidth = 1;
+
+    // Draw grid using the current grid type
+    gridType.draw(ctx, gridConfig, {
+        width: canvas.width,
+        height: canvas.height,
+        gridSpacing: gridConfig.spacing
+    });
+
+    ctx.restore();
 } 
