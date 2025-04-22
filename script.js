@@ -826,20 +826,14 @@ function drawCanvas() {
             // Reset transform
             ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-            // Calculate scale to fit image in canvas
-            const scaleToFit = Math.min(
-                canvas.width / currentImage.naturalWidth,
-                canvas.height / currentImage.naturalHeight
-            );
-
             // Apply centre translation
             const centerX = canvas.width / 2;
             const centerY = canvas.height / 2;
             ctx.translate(centerX, centerY);
 
-            // Apply zoom and pan, scaled from fitted scale
+            // Apply zoom and pan
             const userZoom = getZoom();
-            ctx.scale(scaleToFit * userZoom, scaleToFit * userZoom);
+            ctx.scale(userZoom, userZoom);
             ctx.translate(getPanX(), getPanY());
 
             // Center the image
