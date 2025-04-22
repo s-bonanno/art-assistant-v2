@@ -563,9 +563,6 @@
                 <!-- Filter tabs -->
                 <div class="tab-group">
                     <button class="tab-button active" data-tab="lightTab">Light</button>
-                    <button class="tab-button" data-tab="posteriseTab">Posterise</button>
-                    <button class="tab-button" data-tab="edgesTab">Edges</button>
-                    <button class="tab-button" data-tab="lightSplitTab">Light Split</button>
                 </div>
 
                 <!-- Light Tab -->
@@ -601,6 +598,16 @@
                                 class="w-full">
                         </div>
                         
+                        <!-- Midtones -->
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-zinc-400">Midtones</span>
+                                <span class="text-xs text-zinc-400" id="midtonesValue">0</span>
+                            </div>
+                            <input type="range" id="midtones" min="-100" max="100" step="1" value="0"
+                                class="w-full">
+                        </div>
+                        
                         <!-- Shadows -->
                         <div class="space-y-2">
                             <div class="flex items-center justify-between">
@@ -608,85 +615,6 @@
                                 <span class="text-xs text-zinc-400" id="shadowsValue">0</span>
                             </div>
                             <input type="range" id="shadows" min="-100" max="100" step="1" value="0"
-                                class="w-full">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Posterise Tab -->
-                <div class="tab-content hidden" id="posteriseTab">
-                    <div class="space-y-3">
-                        <div class="flex items-center justify-between">
-                            <label class="text-sm font-medium text-zinc-400">Posterise</label>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="posteriseToggle" class="sr-only peer">
-                                <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:bg-white peer-checked:bg-indigo-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                            </label>
-                        </div>
-                        <div class="space-y-2">
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs text-zinc-400">Levels</span>
-                                <span class="text-xs text-zinc-400" id="posteriseLevelsValue">4</span>
-                            </div>
-                            <input type="range" id="posteriseLevels" min="2" max="10" step="1" value="4"
-                                class="w-full">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Edge Detection Tab -->
-                <div class="tab-content hidden" id="edgesTab">
-                    <div class="space-y-3">
-                        <div class="flex items-center justify-between">
-                            <label class="text-sm font-medium text-zinc-400">Edge Detection</label>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="edgesToggle" class="sr-only peer">
-                                <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:bg-white peer-checked:bg-indigo-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                            </label>
-                        </div>
-                        <div class="space-y-2">
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs text-zinc-400">Strength</span>
-                                <span class="text-xs text-zinc-400" id="edgesStrengthValue">2</span>
-                            </div>
-                            <input type="range" id="edgesStrength" min="0" max="5" step="0.1" value="2"
-                                class="w-full">
-                        </div>
-                        <div class="space-y-2">
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs text-zinc-400">Opacity</span>
-                                <span class="text-xs text-zinc-400" id="edgesOpacityValue">100%</span>
-                            </div>
-                            <input type="range" id="edgesOpacity" min="0" max="1" step="0.1" value="1"
-                                class="w-full">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Light Split Tab -->
-                <div class="tab-content hidden" id="lightSplitTab">
-                    <div class="space-y-3">
-                        <div class="flex items-center justify-between">
-                            <label class="text-sm font-medium text-zinc-400">Light Split</label>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="lightSplitToggle" class="sr-only peer">
-                                <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:bg-white peer-checked:bg-indigo-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                            </label>
-                        </div>
-                        <div class="space-y-2">
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs text-zinc-400">Shadows</span>
-                                <span class="text-xs text-zinc-400" id="shadowThresholdValue">30%</span>
-                            </div>
-                            <input type="range" id="shadowThreshold" min="0" max="50" step="1" value="30"
-                                class="w-full">
-                        </div>
-                        <div class="space-y-2">
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs text-zinc-400">Highlights</span>
-                                <span class="text-xs text-zinc-400" id="highlightThresholdValue">70%</span>
-                            </div>
-                            <input type="range" id="highlightThreshold" min="50" max="100" step="1" value="70"
                                 class="w-full">
                         </div>
                     </div>
