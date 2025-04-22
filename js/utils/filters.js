@@ -1,7 +1,7 @@
 // Filter state object
 export const filters = {
     light: {
-        active: true,
+        active: false,
         exposure: 0,
         contrast: 0,
         highlights: 0,
@@ -15,7 +15,7 @@ export const filterCache = {
     width: 0,
     height: 0,
     needsUpdate: true,
-    lastLightValues: { active: true, exposure: 0, contrast: 0, highlights: 0, shadows: 0 },
+    lastLightValues: { active: false, exposure: 0, contrast: 0, highlights: 0, shadows: 0 },
     lastFilters: null
 };
 
@@ -111,73 +111,90 @@ function applyLightAdjustments(data, lightValues) {
     }
 }
 
-// Initialize filter listeners
-export function initFilterListeners(drawCanvas) {
-    // Light filter toggle
-    const lightFilterToggle = document.getElementById('lightFilterToggle');
-    if (lightFilterToggle) {
-        lightFilterToggle.addEventListener('change', (e) => {
-            filters.light.active = e.target.checked;
+// Helper function to create filter toggle listener
+function createFilterToggleListener(filterId, filterState, drawCanvas) {
+    const toggleElement = document.getElementById(`${filterId}FilterToggle`);
+    if (toggleElement) {
+        toggleElement.checked = filterState.active;
+        toggleElement.addEventListener('change', (e) => {
+            filterState.active = e.target.checked;
             filterCache.needsUpdate = true;
             drawCanvas();
         });
     }
+    return toggleElement;
+}
 
-    // Light filter reset
-    const lightFilterReset = document.getElementById('lightFilterReset');
-    if (lightFilterReset) {
-        lightFilterReset.addEventListener('click', () => {
-            filters.light.exposure = 0;
-            filters.light.contrast = 0;
-            filters.light.highlights = 0;
-            filters.light.shadows = 0;
+// Helper function to create filter reset listener
+function createFilterResetListener(filterId, filterState, sliderConfigs, drawCanvas) {
+    const resetElement = document.getElementById(`${filterId}FilterReset`);
+    if (resetElement) {
+        resetElement.addEventListener('click', () => {
+            // Reset all values in the filter state
+            Object.keys(filterState).forEach(key => {
+                if (key !== 'active') {
+                    filterState[key] = 0;
+                }
+            });
             
-            // Update UI
-            document.getElementById('exposure').value = 0;
-            document.getElementById('exposureValue').textContent = '0';
-            document.getElementById('contrast').value = 0;
-            document.getElementById('contrastValue').textContent = '0';
-            document.getElementById('highlights').value = 0;
-            document.getElementById('highlightsValue').textContent = '0';
-            document.getElementById('shadows').value = 0;
-            document.getElementById('shadowsValue').textContent = '0';
+            // Update UI for all sliders
+            sliderConfigs.forEach(({ id }) => {
+                const slider = document.getElementById(id);
+                const valueDisplay = document.getElementById(`${id}Value`);
+                if (slider && valueDisplay) {
+                    slider.value = 0;
+                    valueDisplay.textContent = '0';
+                }
+            });
             
             filterCache.needsUpdate = true;
             drawCanvas();
         });
     }
+    return resetElement;
+}
 
-    // Light section toggle
-    const lightSectionToggle = document.getElementById('lightSectionToggle');
-    const lightSectionContent = document.getElementById('lightSectionContent');
+// Helper function to create filter slider listeners
+function createFilterSliderListeners(filterId, filterState, sliderConfigs, drawCanvas) {
+    const toggle = document.getElementById(`${filterId}FilterToggle`);
     
-    if (lightSectionToggle && lightSectionContent) {
-        let isLightSectionOpen = true;
-
-        lightSectionToggle.addEventListener('click', () => {
-            isLightSectionOpen = !isLightSectionOpen;
-            lightSectionContent.style.display = isLightSectionOpen ? 'block' : 'none';
-            const icon = lightSectionToggle.querySelector('i');
-            if (icon) {
-                icon.setAttribute('data-lucide', isLightSectionOpen ? 'chevron-down' : 'chevron-up');
-                lucide.createIcons();
-            }
-        });
-    }
-
-    // Light adjustment sliders
-    const lightSliders = ['exposure', 'contrast', 'highlights', 'shadows'];
-    lightSliders.forEach(sliderId => {
-        const slider = document.getElementById(sliderId);
-        const valueDisplay = document.getElementById(`${sliderId}Value`);
+    sliderConfigs.forEach(({ id, min, max, step }) => {
+        const slider = document.getElementById(id);
+        const valueDisplay = document.getElementById(`${id}Value`);
 
         if (slider && valueDisplay) {
+            // Set initial values
+            slider.value = filterState[id];
+            valueDisplay.textContent = filterState[id];
+
             slider.addEventListener('input', (e) => {
-                filters.light[sliderId] = parseInt(e.target.value);
+                // Auto-activate the filter if it's inactive and a slider is moved
+                if (!filterState.active && toggle) {
+                    filterState.active = true;
+                    toggle.checked = true;
+                }
+                
+                filterState[id] = parseInt(e.target.value);
                 valueDisplay.textContent = e.target.value;
                 filterCache.needsUpdate = true;
                 drawCanvas();
             });
         }
     });
+}
+
+// Initialize filter listeners
+export function initFilterListeners(drawCanvas) {
+    // Light filter configuration
+    const lightSliderConfigs = [
+        { id: 'exposure', min: -100, max: 100, step: 1 },
+        { id: 'contrast', min: -100, max: 100, step: 1 },
+        { id: 'highlights', min: -100, max: 100, step: 1 },
+        { id: 'shadows', min: -100, max: 100, step: 1 }
+    ];
+
+    // Initialize light filter controls
+    createFilterToggleListener('light', filters.light, drawCanvas);
+    createFilterResetListener('light', filters.light, lightSliderConfigs, drawCanvas);
+    createFilterSliderListeners('light', filters.light, lightSliderConfigs, drawCanvas);
 } 
