@@ -818,79 +818,87 @@ function drawCanvas() {
     // Clear canvas with dark background
     ctx.fillStyle = '#2c2c2e';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
+
     // Draw image if one is loaded
     if (currentImage) {
         if (config.viewMode === 'full') {
             // Full image mode
             ctx.save();
-            
+
             // Reset transform
             ctx.setTransform(1, 0, 0, 1, 0, 0);
-            
-            // Center the canvas using its actual dimensions
+
+            // Calculate scale to fit image in canvas
+            const scaleToFit = Math.min(
+                canvas.width / currentImage.naturalWidth,
+                canvas.height / currentImage.naturalHeight
+            );
+
+            // Apply centre translation
             const centerX = canvas.width / 2;
             const centerY = canvas.height / 2;
             ctx.translate(centerX, centerY);
-            
-            // Apply zoom and pan
-            const zoom = getZoom();
-            ctx.scale(zoom, zoom);
+
+            // Apply zoom and pan, scaled from fitted scale
+            const userZoom = getZoom();
+            ctx.scale(scaleToFit * userZoom, scaleToFit * userZoom);
             ctx.translate(getPanX(), getPanY());
-            
+
             // Center the image
             ctx.translate(-currentImage.naturalWidth / 2, -currentImage.naturalHeight / 2);
-            
-            // Use original image if zoomed to 100%, otherwise use preview
-            const sourceImage = getZoom() === 1 ? currentImage : previewImage;
-            
-            // Check if we need to update the filter cache
-            if (filterCache.needsUpdate || !filterCache.image || 
+
+            // Choose source image: original vs preview
+            const sourceImage = userZoom === 1 ? currentImage : previewImage;
+
+            // Update filter cache if needed
+            if (
+                filterCache.needsUpdate || 
+                !filterCache.image || 
                 filterCache.width !== sourceImage.width || 
-                filterCache.height !== sourceImage.height) {
-                
+                filterCache.height !== sourceImage.height
+            ) {
                 const tempCanvas = document.createElement('canvas');
                 const tempCtx = tempCanvas.getContext('2d');
-                
+
                 tempCanvas.width = sourceImage.width;
                 tempCanvas.height = sourceImage.height;
                 tempCtx.drawImage(sourceImage, 0, 0);
-                
-                // Only apply filters if any are active
-                const hasActiveFilters = Object.values(filters).some(f => 
-                    (f.enabled !== undefined && f.enabled) || 
+
+                // Only apply filters if active
+                const hasActiveFilters = Object.values(filters).some(f =>
+                    (f.enabled !== undefined && f.enabled) ||
                     (f.exposure !== undefined && (f.exposure !== 0 || f.contrast !== 0 || f.highlights !== 0 || f.shadows !== 0))
                 );
-                
+
                 if (hasActiveFilters) {
                     applyFilters(tempCtx, tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
                 }
-                
+
                 filterCache.image = tempCanvas;
                 filterCache.width = sourceImage.width;
                 filterCache.height = sourceImage.height;
                 filterCache.needsUpdate = false;
             }
-            
+
+            // Draw final filtered image
             ctx.drawImage(filterCache.image, 0, 0, currentImage.naturalWidth, currentImage.naturalHeight);
-            
+
             // Draw grid
             ctx.beginPath();
             ctx.strokeStyle = gridConfig.color;
             ctx.globalAlpha = gridConfig.opacity;
             ctx.lineWidth = gridConfig.lineWeight;
-            
+
             const gridSpacing = config.gridSpacing;
-            for (let x = 0; x <= canvas.width; x += gridSpacing) {
+            for (let x = 0; x <= currentImage.naturalWidth; x += gridSpacing) {
                 ctx.moveTo(x, 0);
-                ctx.lineTo(x, canvas.height);
+                ctx.lineTo(x, currentImage.naturalHeight);
             }
-            
-            for (let y = 0; y <= canvas.height; y += gridSpacing) {
+            for (let y = 0; y <= currentImage.naturalHeight; y += gridSpacing) {
                 ctx.moveTo(0, y);
-                ctx.lineTo(canvas.width, y);
+                ctx.lineTo(currentImage.naturalWidth, y);
             }
-            
+
             ctx.stroke();
             ctx.restore();
         } else {
