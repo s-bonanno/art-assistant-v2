@@ -5,7 +5,7 @@ export const gridConfig = {
     type: 'square',
     spacing: 5,
     color: '#000000', // Set default color to black
-    opacity: 0.5,
+    opacity: 1,
     lineWeight: 1
 };
 
@@ -51,7 +51,7 @@ export function updateColorSwatchSelection(selectedButton) {
 // Set default grid style based on view mode
 export function setDefaultGridStyle(viewMode) {
     // Only reset opacity, preserve other settings
-    gridConfig.opacity = 0.5;
+    gridConfig.opacity = 1;
 
     // Initialize grid type dropdown if it exists
     const gridTypeSelect = document.getElementById('gridType');
