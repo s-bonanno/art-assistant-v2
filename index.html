@@ -568,6 +568,20 @@
                 <!-- Light Tab -->
                 <div class="tab-content active" id="lightTab">
                     <div class="space-y-3">
+                        <!-- Active Toggle and Reset Button -->
+                        <div class="flex items-center justify-between pb-2 border-b border-zinc-800/50">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-xs text-zinc-400">Active</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="lightFilterToggle" class="sr-only peer" checked>
+                                    <div class="w-11 h-6 bg-zinc-800 hover:bg-zinc-700 rounded-full peer peer-checked:bg-zinc-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-zinc-400 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full peer-checked:after:bg-white"></div>
+                                </label>
+                            </div>
+                            <button id="lightFilterReset" class="text-xs text-zinc-400 hover:text-zinc-200 transition-colors duration-200">
+                                Reset
+                            </button>
+                        </div>
+
                         <!-- Exposure -->
                         <div class="space-y-2">
                             <div class="flex items-center justify-between">

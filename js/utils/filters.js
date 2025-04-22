@@ -1,6 +1,7 @@
 // Filter state object
 export const filters = {
     light: {
+        active: true,
         exposure: 0,
         contrast: 0,
         highlights: 0,
@@ -14,7 +15,7 @@ export const filterCache = {
     width: 0,
     height: 0,
     needsUpdate: true,
-    lastLightValues: { exposure: 0, contrast: 0, highlights: 0, shadows: 0 },
+    lastLightValues: { active: true, exposure: 0, contrast: 0, highlights: 0, shadows: 0 },
     lastFilters: null
 };
 
@@ -24,6 +25,7 @@ function haveFiltersChanged() {
     
     // Check light values
     if (filters.light) {
+        if (filters.light.active !== filterCache.lastLightValues.active) return true;
         if (filters.light.exposure !== filterCache.lastLightValues.exposure) return true;
         if (filters.light.contrast !== filterCache.lastLightValues.contrast) return true;
         if (filters.light.highlights !== filterCache.lastLightValues.highlights) return true;
@@ -46,8 +48,8 @@ export function applyFilters(ctx, canvas, x, y, width, height) {
     const imageData = ctx.getImageData(x, y, width, height);
     const data = imageData.data;
     
-    // Apply light adjustments
-    if (filters.light) {
+    // Apply light adjustments if active
+    if (filters.light && filters.light.active) {
         applyLightAdjustments(data, filters.light);
         // Update last light values
         Object.assign(filterCache.lastLightValues, filters.light);
@@ -111,6 +113,40 @@ function applyLightAdjustments(data, lightValues) {
 
 // Initialize filter listeners
 export function initFilterListeners(drawCanvas) {
+    // Light filter toggle
+    const lightFilterToggle = document.getElementById('lightFilterToggle');
+    if (lightFilterToggle) {
+        lightFilterToggle.addEventListener('change', (e) => {
+            filters.light.active = e.target.checked;
+            filterCache.needsUpdate = true;
+            drawCanvas();
+        });
+    }
+
+    // Light filter reset
+    const lightFilterReset = document.getElementById('lightFilterReset');
+    if (lightFilterReset) {
+        lightFilterReset.addEventListener('click', () => {
+            filters.light.exposure = 0;
+            filters.light.contrast = 0;
+            filters.light.highlights = 0;
+            filters.light.shadows = 0;
+            
+            // Update UI
+            document.getElementById('exposure').value = 0;
+            document.getElementById('exposureValue').textContent = '0';
+            document.getElementById('contrast').value = 0;
+            document.getElementById('contrastValue').textContent = '0';
+            document.getElementById('highlights').value = 0;
+            document.getElementById('highlightsValue').textContent = '0';
+            document.getElementById('shadows').value = 0;
+            document.getElementById('shadowsValue').textContent = '0';
+            
+            filterCache.needsUpdate = true;
+            drawCanvas();
+        });
+    }
+
     // Light section toggle
     const lightSectionToggle = document.getElementById('lightSectionToggle');
     const lightSectionContent = document.getElementById('lightSectionContent');
