@@ -410,10 +410,10 @@ function fitToScreen() {
     const availableWidth = mainContainer.clientWidth;
     const availableHeight = mainContainer.clientHeight;
     
-    // Calculate the scale needed to fit the image
+    // Calculate the scale needed to fit the image with reduced padding
     const scale = Math.min(
-        (availableWidth - 64) / currentImage.naturalWidth,
-        (availableHeight - 64) / currentImage.naturalHeight
+        (availableWidth - 32) / currentImage.naturalWidth,
+        (availableHeight - 32) / currentImage.naturalHeight
     );
     
     // Update zoom level

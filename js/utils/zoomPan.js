@@ -80,17 +80,21 @@ function handleZoomFullMode(mouseX, mouseY, zoomFactor, currentImage) {
     const imageX = ((mouseX - canvasCenterX) / _zoom - _panX) + currentImage.naturalWidth / 2;
     const imageY = ((mouseY - canvasCenterY) / _zoom - _panY) + currentImage.naturalHeight / 2;
     
-    // Calculate the same scale as fitToScreen()
+    // Calculate the minimum zoom needed to fit the image in the viewport
     const mainContainer = document.querySelector('.relative.w-full');
     const availableWidth = mainContainer.clientWidth;
     const availableHeight = mainContainer.clientHeight;
-    const minZoom = Math.min(
-        (availableWidth - 64) / currentImage.naturalWidth,
-        (availableHeight - 64) / currentImage.naturalHeight
-    );
     
-    // Apply zoom with minimum of 0.1 (10%) and maximum of 10 (1000%)
-    const newZoom = Math.min(Math.max(0.1, _zoom * zoomFactor), 10);
+    // Calculate minimum zoom based on both dimensions with reduced padding
+    const minZoomWidth = (availableWidth - 32) / currentImage.naturalWidth;
+    const minZoomHeight = (availableHeight - 32) / currentImage.naturalHeight;
+    const minZoom = Math.min(minZoomWidth, minZoomHeight);
+    
+    // Calculate maximum zoom (1000% or 10x)
+    const maxZoom = 10;
+    
+    // Apply zoom with dynamic minimum based on viewport size
+    const newZoom = Math.min(Math.max(minZoom * 0.5, _zoom * zoomFactor), maxZoom);
     
     // Forward transform to get new pan
     // 1. Start with image position
