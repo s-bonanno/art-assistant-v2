@@ -66,11 +66,77 @@ class NoGrid extends GridType {
     }
 }
 
+class GoldenRatioGrid extends GridType {
+    draw(ctx, config, dimensions) {
+        const { width, height } = dimensions;
+        const phi = 1.618033988749895; // Golden ratio
+        const phiInverse = 1 / phi;
+        
+        ctx.beginPath();
+        ctx.strokeStyle = config.color;
+        ctx.globalAlpha = config.opacity;
+        ctx.lineWidth = config.lineWeight;
+        
+        // Vertical lines at golden ratio points
+        const v1 = width * phiInverse;
+        const v2 = width * (1 - phiInverse);
+        
+        ctx.moveTo(v1, 0);
+        ctx.lineTo(v1, height);
+        ctx.moveTo(v2, 0);
+        ctx.lineTo(v2, height);
+        
+        // Horizontal lines at golden ratio points
+        const h1 = height * phiInverse;
+        const h2 = height * (1 - phiInverse);
+        
+        ctx.moveTo(0, h1);
+        ctx.lineTo(width, h1);
+        ctx.moveTo(0, h2);
+        ctx.lineTo(width, h2);
+        
+        ctx.stroke();
+    }
+}
+
+class RuleOfThirdsGrid extends GridType {
+    draw(ctx, config, dimensions) {
+        const { width, height } = dimensions;
+        
+        ctx.beginPath();
+        ctx.strokeStyle = config.color;
+        ctx.globalAlpha = config.opacity;
+        ctx.lineWidth = config.lineWeight;
+        
+        // Vertical lines at thirds
+        const v1 = width / 3;
+        const v2 = (width * 2) / 3;
+        
+        ctx.moveTo(v1, 0);
+        ctx.lineTo(v1, height);
+        ctx.moveTo(v2, 0);
+        ctx.lineTo(v2, height);
+        
+        // Horizontal lines at thirds
+        const h1 = height / 3;
+        const h2 = (height * 2) / 3;
+        
+        ctx.moveTo(0, h1);
+        ctx.lineTo(width, h1);
+        ctx.moveTo(0, h2);
+        ctx.lineTo(width, h2);
+        
+        ctx.stroke();
+    }
+}
+
 // Grid type registry
 const gridTypes = {
     square: new SquareGrid(),
     diagonal: new DiagonalGrid(),
-    none: new NoGrid()
+    none: new NoGrid(),
+    golden: new GoldenRatioGrid(),
+    thirds: new RuleOfThirdsGrid()
 };
 
 // Export the grid types and registry

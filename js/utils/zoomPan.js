@@ -89,8 +89,8 @@ function handleZoomFullMode(mouseX, mouseY, zoomFactor, currentImage) {
         (availableHeight - 64) / currentImage.naturalHeight
     );
     
-    // Apply zoom with minimum matching fitToScreen scale
-    const newZoom = Math.min(Math.max(minZoom, _zoom * zoomFactor), 10);
+    // Apply zoom with minimum of 0.1 (10%) and maximum of 10 (1000%)
+    const newZoom = Math.min(Math.max(0.1, _zoom * zoomFactor), 10);
     
     // Forward transform to get new pan
     // 1. Start with image position

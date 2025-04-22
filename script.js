@@ -487,9 +487,6 @@ imageInput.addEventListener('change', (e) => {
                 config.imageOffsetYPercent = 0;
                 filterCache.needsUpdate = true;
                 
-                // Set default grid style when loading new image
-                setDefaultGridStyle(config.viewMode);
-                
                 // Set default grid size based on image dimensions
                 setDefaultGridSize();
                 
@@ -504,6 +501,8 @@ imageInput.addEventListener('change', (e) => {
                     fitToCanvas();
                 }
                 
+                // Force update grid preview with current settings
+                updateGridPreview();
                 drawCanvas();
             };
             img.src = event.target.result;
@@ -1004,7 +1003,14 @@ function drawCanvas() {
                     height: config.canvasHeight,
                     gridSpacing: config.gridSpacing
                 };
-                gridType.draw(ctx, gridConfig, dimensions);
+
+                // Create a copy of gridConfig with half the line weight for preview
+                const previewGridConfig = {
+                    ...gridConfig,
+                    lineWeight: gridConfig.lineWeight * 0.5
+                };
+                
+                gridType.draw(ctx, previewGridConfig, dimensions);
                 
                 ctx.translate(-0.5, -0.5);
             }

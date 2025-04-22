@@ -20,7 +20,18 @@ const colorSwatches = document.querySelectorAll('[data-color]');
 function updateGridControlsVisibility(gridType) {
     const controls = document.querySelectorAll('.grid-control');
     controls.forEach(control => {
-        control.style.display = gridType === 'none' ? 'none' : 'block';
+        // Hide all controls if grid is disabled
+        if (gridType === 'none') {
+            control.style.display = 'none';
+            return;
+        }
+        
+        // Hide size controls for non-square grid types
+        if (control.hasAttribute('data-grid-control') && gridType !== 'square') {
+            control.style.display = 'none';
+        } else {
+            control.style.display = 'block';
+        }
     });
 }
 
@@ -39,13 +50,8 @@ export function updateColorSwatchSelection(selectedButton) {
 
 // Set default grid style based on view mode
 export function setDefaultGridStyle(viewMode) {
-    if (viewMode === 'full') {
-        gridConfig.opacity = 0.5;
-        gridConfig.lineWeight = 1;
-    } else {
-        gridConfig.opacity = 0.5;
-        gridConfig.lineWeight = 1;
-    }
+    // Only reset opacity, preserve other settings
+    gridConfig.opacity = 0.5;
 
     // Initialize grid type dropdown if it exists
     const gridTypeSelect = document.getElementById('gridType');
@@ -118,11 +124,6 @@ export function initGridStyleListeners(drawCanvas) {
     updateGridPreview();
 }
 
-// Export the current grid type
-export function getCurrentGridType() {
-    return gridTypes[gridConfig.type];
-}
-
 // Grid preview functionality
 export function updateGridPreview() {
     const canvas = document.getElementById('gridPreview');
@@ -146,10 +147,10 @@ export function updateGridPreview() {
     const gridTypeSelect = document.getElementById('gridType');
     const currentType = gridTypeSelect ? gridTypeSelect.value : 'square';
     
-    // Set up grid style
+    // Set up grid style with preview line weight (0.5x)
     ctx.strokeStyle = gridConfig.color;
     ctx.globalAlpha = gridConfig.opacity;
-    ctx.lineWidth = gridConfig.lineWeight;
+    ctx.lineWidth = gridConfig.lineWeight * 0.5;
     
     // Draw grid based on current type
     const gridType = gridTypes[currentType];
@@ -160,4 +161,9 @@ export function updateGridPreview() {
             gridSpacing: currentType === 'square' ? previewSize / 3 : 8 // 3x3 grid for square, fixed spacing for others
         });
     }
+}
+
+// Export the current grid type
+export function getCurrentGridType() {
+    return gridTypes[gridConfig.type];
 } 
