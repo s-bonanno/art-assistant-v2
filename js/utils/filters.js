@@ -94,7 +94,7 @@ function applyLightAdjustments(data, lightValues) {
 
         // Calculate adjustment factors
         const shadowFactor = 1 + (lightValues.shadows / 100);
-        const highlightFactor = 1 + (lightValues.highlights / 100);
+            const highlightFactor = 1 + (lightValues.highlights / 100);
 
         // Apply smooth blending
         const blendFactor = 1 + (shadowWeight * (shadowFactor - 1)) + (highlightWeight * (highlightFactor - 1));
