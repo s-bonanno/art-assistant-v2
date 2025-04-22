@@ -4,8 +4,7 @@ export const filters = {
         exposure: 0,
         contrast: 0,
         highlights: 0,
-        shadows: 0,
-        midtones: 0
+        shadows: 0
     }
 };
 
@@ -15,7 +14,7 @@ export const filterCache = {
     width: 0,
     height: 0,
     needsUpdate: true,
-    lastLightValues: { exposure: 0, contrast: 0, highlights: 0, shadows: 0, midtones: 0 },
+    lastLightValues: { exposure: 0, contrast: 0, highlights: 0, shadows: 0 },
     lastFilters: null
 };
 
@@ -29,7 +28,6 @@ function haveFiltersChanged() {
         if (filters.light.contrast !== filterCache.lastLightValues.contrast) return true;
         if (filters.light.highlights !== filterCache.lastLightValues.highlights) return true;
         if (filters.light.shadows !== filterCache.lastLightValues.shadows) return true;
-        if (filters.light.midtones !== filterCache.lastLightValues.midtones) return true;
     }
     
     return false;
@@ -88,21 +86,16 @@ function applyLightAdjustments(data, lightValues) {
         newG = Math.min(255, Math.max(0, avg + (newG - avg) * contrastFactor));
         newB = Math.min(255, Math.max(0, avg + (newB - avg) * contrastFactor));
 
-        // Calculate smooth blending weights for highlights, midtones, and shadows
+        // Calculate smooth blending weights for highlights and shadows
         const shadowWeight = Math.pow(Math.max(0, 1 - luminance * 2), 1.5); // 1 → 0 as luminance goes from 0 → 0.5
         const highlightWeight = Math.pow(Math.max(0, (luminance - 0.5) * 2), 1.5); // 0 → 1 as luminance goes from 0.5 → 1
-        const midtoneWeight = Math.pow(Math.min(luminance * 2, (1 - luminance) * 2), 1.5); // 0 → 1 → 0 as luminance goes from 0 → 0.5 → 1
 
         // Calculate adjustment factors
         const shadowFactor = 1 + (lightValues.shadows / 100);
         const highlightFactor = 1 + (lightValues.highlights / 100);
-        const midtoneFactor = 1 + (lightValues.midtones / 100);
 
         // Apply smooth blending
-        const blendFactor = 1 + 
-            (shadowWeight * (shadowFactor - 1)) + 
-            (highlightWeight * (highlightFactor - 1)) + 
-            (midtoneWeight * (midtoneFactor - 1));
+        const blendFactor = 1 + (shadowWeight * (shadowFactor - 1)) + (highlightWeight * (highlightFactor - 1));
 
         // Apply the blended adjustment
         newR = Math.min(255, Math.max(0, newR * blendFactor));
@@ -137,7 +130,7 @@ export function initFilterListeners(drawCanvas) {
     }
 
     // Light adjustment sliders
-    const lightSliders = ['exposure', 'contrast', 'highlights', 'shadows', 'midtones'];
+    const lightSliders = ['exposure', 'contrast', 'highlights', 'shadows'];
     lightSliders.forEach(sliderId => {
         const slider = document.getElementById(sliderId);
         const valueDisplay = document.getElementById(`${sliderId}Value`);
