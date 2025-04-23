@@ -172,19 +172,19 @@ function resizeCanvasToFit() {
 
     let width, height;
 
-if (config.viewMode === 'full' && currentImage) {
-    // Get available screen space
-    const displayWidth = window.innerWidth;
-    const displayHeight = window.innerHeight;
+    if (config.viewMode === 'full' && currentImage) {
+        // Get available screen space
+        const displayWidth = window.innerWidth;
+        const displayHeight = window.innerHeight;
 
-    // Set canvas CSS size
-    canvas.style.width = `${displayWidth}px`;
-    canvas.style.height = `${displayHeight}px`;
+        // Set canvas CSS size
+        canvas.style.width = `${displayWidth}px`;
+        canvas.style.height = `${displayHeight}px`;
 
-    // Set canvas drawing buffer size to match
-    canvas.width = displayWidth;
-    canvas.height = displayHeight;
-} else {
+        // Set canvas drawing buffer size to match
+        canvas.width = displayWidth;
+        canvas.height = displayHeight;
+    } else {
         // Canvas mode - determine canvas size based on configured dimensions
         const canvasAspectRatio = config.canvasHeightCm / config.canvasWidthCm;
         const availableAspectRatio = maxHeight / maxWidth;
@@ -216,8 +216,10 @@ if (config.viewMode === 'full' && currentImage) {
     // Update grid size limits after resizing
     updateGridSizeLimits();
 
-    // Redraw canvas
-    drawCanvas();
+    // Redraw canvas if an image is loaded
+    if (currentImage) {
+        drawCanvas();
+    }
 }
 
 // Update canvas size function to use responsive sizing
@@ -816,23 +818,34 @@ exportBtn.addEventListener('click', () => {
         const x = (centerX + getPanX()) * scaleFactor;
         const y = (centerY + getPanY()) * scaleFactor;
         
+        // Choose source image: original vs preview
+        const userZoom = getZoom();
+        const sourceImage = userZoom === 1 ? currentImage : previewImage;
+        
         // Create a temporary canvas for the image and filters
         const tempCanvas = document.createElement('canvas');
         const tempCtx = tempCanvas.getContext('2d');
-        tempCanvas.width = finalWidth;
-        tempCanvas.height = finalHeight;
-
-        // Draw the scaled image to temp canvas
-        tempCtx.drawImage(currentImage, 0, 0, finalWidth, finalHeight);
-
-        // Apply filters to temp canvas if any filters are active
-        const hasActiveFilters = Object.values(filters).some(f => 
-            (f.enabled !== undefined && f.enabled) || // For filters with enabled property
-            (f.exposure !== undefined && (f.exposure !== 0 || f.contrast !== 0 || f.highlights !== 0 || f.shadows !== 0)) // For light adjustments
+        
+        // Calculate scale to maintain preview image's aspect ratio
+        const previewScale = Math.min(
+            finalWidth / sourceImage.width,
+            finalHeight / sourceImage.height
         );
-
+        const scaledWidth = sourceImage.width * previewScale;
+        const scaledHeight = sourceImage.height * previewScale;
+        
+        tempCanvas.width = scaledWidth;
+        tempCanvas.height = scaledHeight;
+        tempCtx.drawImage(sourceImage, 0, 0, scaledWidth, scaledHeight);
+        
+        // Only apply filters if any are active
+        const hasActiveFilters = Object.values(filters).some(f => 
+            (f.enabled !== undefined && f.enabled) || 
+            (f.exposure !== undefined && (f.exposure !== 0 || f.contrast !== 0 || f.highlights !== 0 || f.shadows !== 0))
+        );
+        
         if (hasActiveFilters) {
-            applyFilters(tempCtx, tempCanvas, 0, 0, finalWidth, finalHeight);
+            applyFilters(tempCtx, tempCanvas, 0, 0, scaledWidth, scaledHeight);
         }
 
         // Draw the filtered image to export canvas
@@ -962,17 +975,24 @@ function drawCanvas() {
             const x = centerX + getPanX();
             const y = centerY + getPanY();
             
+            // Choose source image: original vs preview based on zoom level
+            const userZoom = getZoom();
+            const sourceImage = userZoom === 1 ? currentImage : previewImage;
+            
             // Check if we need to update the filter cache
             if (filterCache.needsUpdate || !filterCache.image || 
-                filterCache.width !== finalWidth || 
-                filterCache.height !== finalHeight) {
+                filterCache.width !== sourceImage.width || 
+                filterCache.height !== sourceImage.height) {
                 
                 const tempCanvas = document.createElement('canvas');
                 const tempCtx = tempCanvas.getContext('2d');
                 
-                tempCanvas.width = finalWidth;
-                tempCanvas.height = finalHeight;
-                tempCtx.drawImage(currentImage, 0, 0, finalWidth, finalHeight);
+                // Use the preview image's dimensions
+                tempCanvas.width = sourceImage.width;
+                tempCanvas.height = sourceImage.height;
+                
+                // Draw the source image
+                tempCtx.drawImage(sourceImage, 0, 0);
                 
                 // Only apply filters if any are active
                 const hasActiveFilters = Object.values(filters).some(f => 
@@ -981,16 +1001,19 @@ function drawCanvas() {
                 );
                 
                 if (hasActiveFilters) {
-                    applyFilters(tempCtx, tempCanvas, 0, 0, finalWidth, finalHeight);
+                    applyFilters(tempCtx, tempCanvas, 0, 0, sourceImage.width, sourceImage.height);
                 }
                 
                 filterCache.image = tempCanvas;
-                filterCache.width = finalWidth;
-                filterCache.height = finalHeight;
+                filterCache.width = sourceImage.width;
+                filterCache.height = sourceImage.height;
                 filterCache.needsUpdate = false;
             }
             
-            ctx.drawImage(filterCache.image, x, y);
+            // Draw the filtered image with high-quality scaling
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(filterCache.image, x, y, finalWidth, finalHeight);
             
             // Draw grid using the current grid type
             const gridType = getCurrentGridType();
