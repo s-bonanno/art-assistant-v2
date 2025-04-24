@@ -6,6 +6,12 @@ export const filters = {
         contrast: 0,
         highlights: 0,
         shadows: 0
+    },
+    hueSaturation: {
+        active: false,
+        hue: 0,         // -180 to +180
+        saturation: 0,  // -100 to +100
+        temperature: 0  // -100 to +100
     }
 };
 
@@ -16,6 +22,7 @@ export const filterCache = {
     height: 0,
     needsUpdate: true,
     lastLightValues: { active: false, exposure: 0, contrast: 0, highlights: 0, shadows: 0 },
+    lastHueSatValues: { active: false, hue: 0, saturation: 0, temperature: 0 },
     lastFilters: null
 };
 
@@ -50,16 +57,39 @@ function haveFiltersChanged() {
         }
     }
     
+    // Check hue/saturation values
+    if (filters.hueSaturation) {
+        // If filter isn't active, no need to check values
+        if (!filters.hueSaturation.active && !filterCache.lastHueSatValues.active) return false;
+        
+        // If active state changed, filters have changed
+        if (filters.hueSaturation.active !== filterCache.lastHueSatValues.active) return true;
+        
+        // Only check values if filter is active
+        if (filters.hueSaturation.active) {
+            if (filters.hueSaturation.hue !== filterCache.lastHueSatValues.hue) return true;
+            if (filters.hueSaturation.saturation !== filterCache.lastHueSatValues.saturation) return true;
+            if (filters.hueSaturation.temperature !== filterCache.lastHueSatValues.temperature) return true;
+        }
+    }
+    
     return false;
 }
 
 // Helper function to check if any filters are actually active and have non-zero values
 export function areFiltersActive() {
-    return filters.light && filters.light.active && (
-        filters.light.exposure !== 0 || 
-        filters.light.contrast !== 0 || 
-        filters.light.highlights !== 0 || 
-        filters.light.shadows !== 0
+    return (
+        (filters.light && filters.light.active && (
+            filters.light.exposure !== 0 || 
+            filters.light.contrast !== 0 || 
+            filters.light.highlights !== 0 || 
+            filters.light.shadows !== 0
+        )) ||
+        (filters.hueSaturation && filters.hueSaturation.active && (
+            filters.hueSaturation.hue !== 0 || 
+            filters.hueSaturation.saturation !== 0 || 
+            filters.hueSaturation.temperature !== 0
+        ))
     );
 }
 
@@ -90,6 +120,13 @@ export function applyFilters(ctx, canvas, x, y, width, height) {
         Object.assign(filterCache.lastLightValues, filters.light);
     }
     
+    // Apply hue/saturation adjustments if active
+    if (filters.hueSaturation && filters.hueSaturation.active) {
+        applyHueSaturationAdjustments(data, filters.hueSaturation);
+        // Update last hue/sat values
+        Object.assign(filterCache.lastHueSatValues, filters.hueSaturation);
+    }
+    
     ctx.putImageData(imageData, x, y);
     
     // Update cache
@@ -109,7 +146,13 @@ function applyLightAdjustments(data, lightValues) {
     
     // Pre-calculate factors to avoid repeated calculations in the loop
     const exposureFactor = 1 + (lightValues.exposure / 100);
-    const contrastValue = lightValues.contrast;
+    
+    // Remap contrast from slider range (-100 to +100) to effective range (-60 to +65)
+    const remappedContrast = lightValues.contrast > 0 
+        ? (lightValues.contrast / 100) * 65  // Positive values map to 0 to +65
+        : (lightValues.contrast / 100) * 60; // Negative values map to 0 to -60
+    
+    const contrastValue = remappedContrast;
     const shadowFactor = 1 + (lightValues.shadows / 100);
     const highlightFactor = 1 + (lightValues.highlights / 100);
     
@@ -187,6 +230,293 @@ function applyLightAdjustments(data, lightValues) {
         data[i] = newR;
         data[i + 1] = newG;
         data[i + 2] = newB;
+    }
+}
+
+// HSL/RGB conversion helpers - Highly optimized versions
+function rgbToHsl(r, g, b) {
+    r /= 255;
+    g /= 255;
+    b /= 255;
+    
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const l = (max + min) / 2;
+    
+    // Fast path for grayscale
+    if (max === min) {
+        return [0, 0, l * 100];
+    }
+    
+    const d = max - min;
+    const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    
+    let h;
+    if (max === r) {
+        h = (g - b) / d + (g < b ? 6 : 0);
+    } else if (max === g) {
+        h = (b - r) / d + 2;
+    } else {
+        h = (r - g) / d + 4;
+    }
+    
+    h = (h / 6) * 360;
+    return [h, s * 100, l * 100];
+}
+
+function hslToRgb(h, s, l) {
+    h /= 360;
+    s /= 100;
+    l /= 100;
+    
+    // Fast path for grayscale
+    if (s === 0) {
+        const v = Math.round(l * 255);
+        return [v, v, v];
+    }
+    
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    
+    // Optimize by avoiding function calls
+    let tr = h + 1/3;
+    let tg = h;
+    let tb = h - 1/3;
+    
+    // Normalize hue components
+    tr = tr < 0 ? tr + 1 : tr > 1 ? tr - 1 : tr;
+    tg = tg < 0 ? tg + 1 : tg > 1 ? tg - 1 : tg;
+    tb = tb < 0 ? tb + 1 : tb > 1 ? tb - 1 : tb;
+    
+    // Calculate RGB - optimized version with fewer branches
+    let r, g, b;
+    
+    // Red
+    r = tr < 1/6 ? p + (q - p) * 6 * tr :
+        tr < 1/2 ? q :
+        tr < 2/3 ? p + (q - p) * (2/3 - tr) * 6 : p;
+        
+    // Green
+    g = tg < 1/6 ? p + (q - p) * 6 * tg :
+        tg < 1/2 ? q :
+        tg < 2/3 ? p + (q - p) * (2/3 - tg) * 6 : p;
+        
+    // Blue
+    b = tb < 1/6 ? p + (q - p) * 6 * tb :
+        tb < 1/2 ? q :
+        tb < 2/3 ? p + (q - p) * (2/3 - tb) * 6 : p;
+    
+    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+}
+
+// Apply hue/saturation adjustments
+function applyHueSaturationAdjustments(data, hueSatValues) {
+    // Quick check to avoid processing when no adjustments are needed
+    if (hueSatValues.hue === 0 && hueSatValues.saturation === 0 && hueSatValues.temperature === 0) {
+        return;
+    }
+    
+    // Performance optimization: Pre-calculate adjustments
+    const hueShift = hueSatValues.hue;
+    const satFactor = 1 + (hueSatValues.saturation / 100);
+    const tempValue = hueSatValues.temperature;
+    
+    // Fast path for temperature-only adjustments - optimized for performance
+    if (hueSatValues.hue === 0 && hueSatValues.saturation === 0 && hueSatValues.temperature !== 0) {
+        // Pre-calculate constants for more efficient loop
+        const isWarm = tempValue > 0;
+        const tempStrength = Math.min(1, Math.abs(tempValue) / 120);
+        
+        // Warm and cool reference colors (pre-divided by 255 for faster blending)
+        const warmColors = [1.0, 0.784, 0.47]; // Normalized warm color
+        const coolColors = [0.51, 0.686, 0.94]; // Normalized cool color
+        
+        // Performance optimization: create tables for common operations
+        const length = data.length;
+        
+        // Process pixels in blocks for better performance
+        for (let i = 0; i < length; i += 4) {
+            // Skip transparent pixels
+            const alpha = data[i + 3];
+            if (alpha === 0) continue;
+            
+            const r = data[i];
+            const g = data[i + 1];
+            const b = data[i + 2];
+            
+            // Fast luminance approximation (perceptual weights)
+            // Faster than full HSL conversion when we only need luminance
+            const luminance = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
+            
+            let newR, newG, newB;
+            
+            if (isWarm) {
+                // WARM LIGHT - Optimized version
+                // Highlights get warmer, shadows mostly preserved
+                
+                // Calculate highlight influence with fewer operations
+                // Use power curve with fewer operations
+                const highlightInfluence = luminance * luminance * tempStrength;
+                
+                // Direct RGB blending for warm light (faster than HSL conversion)
+                const blend = 0.25 * highlightInfluence;
+                
+                // Simple RGB blending
+                newR = r * (1 - blend) + 255 * warmColors[0] * blend;
+                newG = g * (1 - blend) + 255 * warmColors[1] * blend;
+                newB = b * (1 - blend) + 255 * warmColors[2] * blend;
+                
+                // Apply subtle contrast enhancement to warm areas for a sunlit effect
+                if (luminance > 0.5) {
+                    // Boost highlights slightly
+                    const brightBoost = 1 + (0.1 * highlightInfluence);
+                    newR *= brightBoost;
+                    newG *= brightBoost;
+                    newB *= brightBoost;
+                }
+            } else {
+                // COOL LIGHT - Optimized version
+                // Shadows get cooler, highlights mostly preserved
+                
+                // Calculate shadow influence with fewer operations
+                const shadowInfluence = (1 - luminance) * tempStrength;
+                
+                // Direct RGB blending for cool light
+                const blend = 0.25 * shadowInfluence;
+                
+                // Simple RGB blending
+                newR = r * (1 - blend) + 255 * coolColors[0] * blend;
+                newG = g * (1 - blend) + 255 * coolColors[1] * blend;
+                newB = b * (1 - blend) + 255 * coolColors[2] * blend;
+                
+                // Apply subtle darkening to shadows for a cool light effect
+                if (luminance < 0.5) {
+                    // Darken shadows slightly
+                    const shadowDarken = 1 - (0.05 * shadowInfluence);
+                    newR *= shadowDarken;
+                    newG *= shadowDarken;
+                    newB *= shadowDarken;
+                }
+            }
+            
+            // Fast clamp and update
+            data[i] = newR < 0 ? 0 : newR > 255 ? 255 : newR;
+            data[i + 1] = newG < 0 ? 0 : newG > 255 ? 255 : newG;
+            data[i + 2] = newB < 0 ? 0 : newB > 255 ? 255 : newB;
+        }
+        return;
+    }
+    
+    // Fast path for hue-only adjustments
+    if (hueSatValues.hue !== 0 && hueSatValues.saturation === 0 && hueSatValues.temperature === 0) {
+        // Standard hue adjustment (relatively fast)
+        for (let i = 0; i < data.length; i += 4) {
+            if (data[i + 3] === 0) continue;
+            
+            let [h, s, l] = rgbToHsl(data[i], data[i + 1], data[i + 2]);
+            h = (h + hueShift + 360) % 360;
+            
+            let [newR, newG, newB] = hslToRgb(h, s, l);
+            
+            data[i] = newR;
+            data[i + 1] = newG;
+            data[i + 2] = newB;
+        }
+        return;
+    }
+    
+    // Fast path for saturation-only adjustments
+    if (hueSatValues.hue === 0 && hueSatValues.saturation !== 0 && hueSatValues.temperature === 0) {
+        for (let i = 0; i < data.length; i += 4) {
+            if (data[i + 3] === 0) continue;
+            
+            let [h, s, l] = rgbToHsl(data[i], data[i + 1], data[i + 2]);
+            s = Math.max(0, Math.min(100, s * satFactor));
+            
+            let [newR, newG, newB] = hslToRgb(h, s, l);
+            
+            data[i] = newR;
+            data[i + 1] = newG;
+            data[i + 2] = newB;
+        }
+        return;
+    }
+    
+    // Combined adjustments path - optimized version
+    for (let i = 0; i < data.length; i += 4) {
+        if (data[i + 3] === 0) continue;
+        
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        
+        // Only do full HSL conversion once
+        let [h, s, l] = rgbToHsl(r, g, b);
+        let newR, newG, newB;
+        
+        // Apply hue shift if needed
+        if (hueShift !== 0) {
+            h = (h + hueShift + 360) % 360;
+        }
+        
+        // Apply saturation adjustment if needed
+        if (hueSatValues.saturation !== 0) {
+            s = Math.max(0, Math.min(100, s * satFactor));
+        }
+        
+        // Apply temperature adjustment if needed
+        if (tempValue !== 0) {
+            const isWarm = tempValue > 0;
+            const tempStrength = Math.min(1, Math.abs(tempValue) / 120);
+            const luminance = l / 100; // Already calculated in HSL conversion
+            
+            // Get RGB first for blending
+            [newR, newG, newB] = hslToRgb(h, s, l);
+            
+            if (isWarm) {
+                // Simplified warm light effect
+                const highlightInfluence = luminance * luminance * tempStrength;
+                const blend = 0.25 * highlightInfluence;
+                
+                // Warm light blending
+                newR = newR * (1 - blend) + 255 * blend;
+                newG = newG * (1 - blend) + 200 * blend;
+                newB = newB * (1 - blend) + 120 * blend;
+                
+                // Boost highlights
+                if (luminance > 0.5) {
+                    const brightBoost = 1 + (0.1 * highlightInfluence);
+                    newR *= brightBoost;
+                    newG *= brightBoost;
+                    newB *= brightBoost;
+                }
+            } else {
+                // Simplified cool light effect
+                const shadowInfluence = (1 - luminance) * tempStrength;
+                const blend = 0.25 * shadowInfluence;
+                
+                // Cool light blending
+                newR = newR * (1 - blend) + 130 * blend;
+                newG = newG * (1 - blend) + 175 * blend;
+                newB = newB * (1 - blend) + 240 * blend;
+                
+                // Darken shadows
+                if (luminance < 0.5) {
+                    const shadowDarken = 1 - (0.05 * shadowInfluence);
+                    newR *= shadowDarken;
+                    newG *= shadowDarken;
+                    newB *= shadowDarken;
+                }
+            }
+        } else {
+            // No temperature adjustment, just convert back to RGB
+            [newR, newG, newB] = hslToRgb(h, s, l);
+        }
+        
+        // Update with fast clamping
+        data[i] = newR < 0 ? 0 : newR > 255 ? 255 : newR;
+        data[i + 1] = newG < 0 ? 0 : newG > 255 ? 255 : newG;
+        data[i + 2] = newB < 0 ? 0 : newB > 255 ? 255 : newB;
     }
 }
 
@@ -290,8 +620,20 @@ export function initFilterListeners(drawCanvas) {
         { id: 'shadows', min: -100, max: 100, step: 1 }
     ];
 
+    // Hue/Saturation filter configuration
+    const hueSatSliderConfigs = [
+        { id: 'hue', min: -180, max: 180, step: 1 },
+        { id: 'saturation', min: -100, max: 100, step: 1 },
+        { id: 'temperature', min: -100, max: 100, step: 1 }
+    ];
+
     // Initialize light filter controls
     createFilterToggleListener('light', filters.light, drawCanvas);
     createFilterResetListener('light', filters.light, lightSliderConfigs, drawCanvas);
     createFilterSliderListeners('light', filters.light, lightSliderConfigs, drawCanvas);
+    
+    // Initialize hue/saturation filter controls
+    createFilterToggleListener('hueSaturation', filters.hueSaturation, drawCanvas);
+    createFilterResetListener('hueSaturation', filters.hueSaturation, hueSatSliderConfigs, drawCanvas);
+    createFilterSliderListeners('hueSaturation', filters.hueSaturation, hueSatSliderConfigs, drawCanvas);
 } 

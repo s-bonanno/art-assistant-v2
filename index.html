@@ -563,6 +563,7 @@
                 <!-- Filter tabs -->
                 <div class="tab-group">
                     <button class="tab-button active" data-tab="lightTab">Light</button>
+                    <button class="tab-button" data-tab="hueSaturationTab">Colour</button>
                 </div>
 
                 <!-- Light Tab -->
@@ -620,6 +621,59 @@
                             </div>
                             <input type="range" id="shadows" min="-100" max="100" step="1" value="0"
                                 class="w-full">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Hue/Saturation Tab (renamed to Colour) -->
+                <div class="tab-content hidden" id="hueSaturationTab">
+                    <div class="space-y-3">
+                        <!-- Active Toggle and Reset Button -->
+                        <div class="flex items-center justify-between pb-2 border-b border-zinc-800/50">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-xs text-zinc-400">Active</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="hueSaturationFilterToggle" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-zinc-800 hover:bg-zinc-700 rounded-full peer peer-checked:bg-zinc-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-zinc-400 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full peer-checked:after:bg-white"></div>
+                                </label>
+                            </div>
+                            <button id="hueSaturationFilterReset" class="text-xs text-zinc-400 hover:text-zinc-200 transition-colors duration-200">
+                                Reset
+                            </button>
+                        </div>
+
+                        <!-- Hue Shift -->
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-zinc-400">Hue Shift</span>
+                                <span class="text-xs text-zinc-400" id="hueValue">0°</span>
+                            </div>
+                            <input type="range" id="hue" min="-180" max="180" step="1" value="0"
+                                class="w-full">
+                        </div>
+                        
+                        <!-- Saturation -->
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-zinc-400">Saturation</span>
+                                <span class="text-xs text-zinc-400" id="saturationValue">0</span>
+                            </div>
+                            <input type="range" id="saturation" min="-100" max="100" step="1" value="0"
+                                class="w-full">
+                        </div>
+                        
+                        <!-- Color Temperature -->
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-zinc-400">Color Temperature</span>
+                                <span class="text-xs text-zinc-400" id="temperatureValue">0</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] text-zinc-500">Cool</span>
+                                <input type="range" id="temperature" min="-100" max="100" step="1" value="0"
+                                    class="w-full">
+                                <span class="text-[10px] text-zinc-500">Warm</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -849,6 +903,26 @@
                 const contentId = tab.dataset.tab;
                 document.getElementById(contentId).classList.remove('hidden');
             });
+        });
+        
+        // Ensure proper tab selection when filter panel is opened
+        document.querySelector('[data-panel="filtersPanel"]').addEventListener('click', () => {
+            // Check if any tab is already active, if not select the Light tab by default
+            const activeTab = document.querySelector('#filtersPanel .tab-button.active');
+            if (!activeTab) {
+                // Select the Light tab and its content
+                const lightTab = document.querySelector('#filtersPanel .tab-button[data-tab="lightTab"]');
+                const lightContent = document.getElementById('lightTab');
+                
+                if (lightTab && lightContent) {
+                    // Activate the Light tab and show its content
+                    filterTabs.forEach(t => t.classList.remove('active'));
+                    filterContents.forEach(c => c.classList.add('hidden'));
+                    
+                    lightTab.classList.add('active');
+                    lightContent.classList.remove('hidden');
+                }
+            }
         });
     </script>
     <script src="script.js" type="module"></script>
