@@ -27,7 +27,7 @@ const EXPORT_SIZE = 2400; // Size of the exported image
 const CM_PER_INCH = 2.54; // Conversion factor for inches to centimeters
 import { convertToUnit, convertFromUnit } from './js/utils/unitConversion.js';
 import { gridConfig, updateColorSwatchSelection, setDefaultGridStyle, initGridStyleListeners, getCurrentGridType, updateGridPreview } from './js/utils/gridStyle.js';
-import { filters, filterCache, applyFilters, initFilterListeners } from './js/utils/filters.js';
+import { filters, filterCache, applyFilters, initFilterListeners, areFiltersActive } from './js/utils/filters.js';
 import { getZoom, setZoom, getPanX, setPanX, getPanY, setPanY, resetZoomAndPan, zoomTo100, initZoomPanListeners, calculateGridSizeLimits } from './js/utils/zoomPan.js';
 
 let currentImage = null;
@@ -171,19 +171,25 @@ function resizeCanvasToFit() {
     const maxHeight = container.clientHeight;
 
     let width, height;
+    let needsResize = false;
 
     if (config.viewMode === 'full' && currentImage) {
         // Get available screen space
         const displayWidth = window.innerWidth;
         const displayHeight = window.innerHeight;
 
-        // Set canvas CSS size
-        canvas.style.width = `${displayWidth}px`;
-        canvas.style.height = `${displayHeight}px`;
+        // Check if canvas size actually needs to change
+        needsResize = canvas.width !== displayWidth || canvas.height !== displayHeight;
+        
+        if (needsResize) {
+            // Set canvas CSS size
+            canvas.style.width = `${displayWidth}px`;
+            canvas.style.height = `${displayHeight}px`;
 
-        // Set canvas drawing buffer size to match
-        canvas.width = displayWidth;
-        canvas.height = displayHeight;
+            // Set canvas drawing buffer size to match
+            canvas.width = displayWidth;
+            canvas.height = displayHeight;
+        }
     } else {
         // Canvas mode - determine canvas size based on configured dimensions
         const canvasAspectRatio = config.canvasHeightCm / config.canvasWidthCm;
@@ -197,29 +203,39 @@ function resizeCanvasToFit() {
             height = width * canvasAspectRatio;
         }
 
-        // Set canvas drawing size
-        canvas.width = width;
-        canvas.height = height;
+        // Check if canvas size actually needs to change (with small tolerance for floating point issues)
+        const sizeDifferenceWidth = Math.abs(canvas.width - width);
+        const sizeDifferenceHeight = Math.abs(canvas.height - height);
+        needsResize = sizeDifferenceWidth > 1 || sizeDifferenceHeight > 1;
+        
+        if (needsResize) {
+            // Set canvas drawing size
+            canvas.width = width;
+            canvas.height = height;
 
-        // Set CSS size explicitly in pixels
-        canvas.style.width = `${width}px`;
-        canvas.style.height = `${height}px`;
+            // Set CSS size explicitly in pixels
+            canvas.style.width = `${width}px`;
+            canvas.style.height = `${height}px`;
 
-        // Update config with current pixel dimensions
-        config.canvasWidth = width;
-        config.canvasHeight = height;
+            // Update config with current pixel dimensions
+            config.canvasWidth = width;
+            config.canvasHeight = height;
+        }
     }
 
-    // Recalculate grid spacing
-    updateGridSpacing();
+    // Only recalculate grid spacing and update grid size limits if the canvas was resized
+    if (needsResize) {
+        // Recalculate grid spacing
+        updateGridSpacing();
 
-    // Update grid size limits after resizing
-    updateGridSizeLimits();
+        // Update grid size limits after resizing
+        updateGridSizeLimits();
 
-    // Redraw canvas if an image is loaded
-    if (currentImage) {
-        drawCanvas();
+        // Return true if canvas was resized
+        return true;
     }
+    
+    return false;
 }
 
 // Update canvas size function to use responsive sizing
@@ -249,7 +265,7 @@ function setDefaultGridSize() {
         if (config.viewMode === 'full') {
             // Full image mode - use image dimensions in pixels
             const longestSide = Math.max(currentImage.naturalWidth, currentImage.naturalHeight);
-            const defaultGridSize = Math.floor(longestSide / 5);
+            const defaultGridSize = Math.round(longestSide / 5);
             
             // Update config and UI
             config.gridSpacing = defaultGridSize;
@@ -267,6 +283,8 @@ function setDefaultGridSize() {
             pxOption.textContent = 'px';
             unitSelect.innerHTML = '';
             unitSelect.appendChild(pxOption);
+            
+            console.log("Set full image grid size to:", defaultGridSize, "px");
         } else {
             // Canvas mode - use canvas dimensions in cm
             const longestSideCm = Math.max(config.canvasWidthCm, config.canvasHeightCm);
@@ -298,6 +316,8 @@ function setDefaultGridSize() {
             // Calculate pixels per cm for grid spacing
             const pixelsPerCm = config.canvasWidth / config.canvasWidthCm;
             config.gridSpacing = defaultGridSizeCm * pixelsPerCm;
+            
+            console.log("Set canvas grid size to:", defaultGridSizeCm, "cm");
         }
         
         // Update grid size limits for the current mode
@@ -882,207 +902,134 @@ exportBtn.addEventListener('click', () => {
     link.click();
 });
 
-// Modify the drawCanvas function to use preview image and cached filters
-function drawCanvas() {
-    // Clear canvas with dark background
-    ctx.fillStyle = '#2c2c2e';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+// Add these variables near the top where other state variables are defined
+let fullModeState = {
+    zoom: 1,
+    panX: 0,
+    panY: 0,
+    filterCache: null,
+    gridSettings: null  // Add grid settings storage
+};
 
-    // Draw image if one is loaded
-    if (currentImage) {
-        if (config.viewMode === 'full') {
-            // Full image mode
-            ctx.save();
+let canvasModeState = {
+    zoom: 1,
+    panX: 0,
+    panY: 0,
+    filterCache: null,
+    gridSettings: null  // Add grid settings storage
+};
 
-            // Reset transform
-            ctx.setTransform(1, 0, 0, 1, 0, 0);
-
-            // Apply centre translation
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
-            ctx.translate(centerX, centerY);
-
-            // Apply zoom and pan
-            const userZoom = getZoom();
-            ctx.scale(userZoom, userZoom);
-            ctx.translate(getPanX(), getPanY());
-
-            // Center the image
-            ctx.translate(-currentImage.naturalWidth / 2, -currentImage.naturalHeight / 2);
-
-            // Choose source image: original vs preview
-            const sourceImage = userZoom === 1 ? currentImage : previewImage;
-
-            // Update filter cache if needed
-            if (
-                filterCache.needsUpdate || 
-                !filterCache.image || 
-                filterCache.width !== sourceImage.width || 
-                filterCache.height !== sourceImage.height
-            ) {
-                const tempCanvas = document.createElement('canvas');
-                const tempCtx = tempCanvas.getContext('2d');
-
-                tempCanvas.width = sourceImage.width;
-                tempCanvas.height = sourceImage.height;
-                tempCtx.drawImage(sourceImage, 0, 0);
-
-                // Only apply filters if active
-                const hasActiveFilters = Object.values(filters).some(f =>
-                    (f.enabled !== undefined && f.enabled) ||
-                    (f.exposure !== undefined && (f.exposure !== 0 || f.contrast !== 0 || f.highlights !== 0 || f.shadows !== 0))
-                );
-
-                if (hasActiveFilters) {
-                    applyFilters(tempCtx, tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
-                }
-
-                filterCache.image = tempCanvas;
-                filterCache.width = sourceImage.width;
-                filterCache.height = sourceImage.height;
-                filterCache.needsUpdate = false;
-            }
-
-            // Draw final filtered image
-            ctx.drawImage(filterCache.image, 0, 0, currentImage.naturalWidth, currentImage.naturalHeight);
-
-            // Draw grid using the current grid type
-            const gridType = getCurrentGridType();
-            if (gridType) {
-                const dimensions = {
-                    width: currentImage.naturalWidth,
-                    height: currentImage.naturalHeight,
-                    gridSpacing: config.gridSpacing
-                };
-                gridType.draw(ctx, gridConfig, dimensions);
-            }
-
-            ctx.restore();
-        } else {
-            // Canvas mode - optimized logic
-            const scale = Math.min(
-                config.canvasWidth / currentImage.width,
-                config.canvasHeight / currentImage.height
-            );
-            
-            const baseWidth = currentImage.width * scale;
-            const baseHeight = currentImage.height * scale;
-            const centerX = (config.canvasWidth - baseWidth) / 2;
-            const centerY = (config.canvasHeight - baseHeight) / 2;
-            
-            const finalWidth = baseWidth * getZoom();
-            const finalHeight = baseHeight * getZoom();
-            const x = centerX + getPanX();
-            const y = centerY + getPanY();
-            
-            // Choose source image: original vs preview based on zoom level
-            const userZoom = getZoom();
-            const sourceImage = userZoom === 1 ? currentImage : previewImage;
-            
-            // Check if we need to update the filter cache
-            if (filterCache.needsUpdate || !filterCache.image || 
-                filterCache.width !== sourceImage.width || 
-                filterCache.height !== sourceImage.height) {
-                
-                const tempCanvas = document.createElement('canvas');
-                const tempCtx = tempCanvas.getContext('2d');
-                
-                // Use the preview image's dimensions
-                tempCanvas.width = sourceImage.width;
-                tempCanvas.height = sourceImage.height;
-                
-                // Draw the source image
-                tempCtx.drawImage(sourceImage, 0, 0);
-                
-                // Only apply filters if any are active
-                const hasActiveFilters = Object.values(filters).some(f => 
-                    (f.enabled !== undefined && f.enabled) || 
-                    (f.exposure !== undefined && (f.exposure !== 0 || f.contrast !== 0 || f.highlights !== 0 || f.shadows !== 0))
-                );
-                
-                if (hasActiveFilters) {
-                    applyFilters(tempCtx, tempCanvas, 0, 0, sourceImage.width, sourceImage.height);
-                }
-                
-                filterCache.image = tempCanvas;
-                filterCache.width = sourceImage.width;
-                filterCache.height = sourceImage.height;
-                filterCache.needsUpdate = false;
-            }
-            
-            // Draw the filtered image with high-quality scaling
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-            ctx.drawImage(filterCache.image, x, y, finalWidth, finalHeight);
-            
-            // Draw grid using the current grid type
-            const gridType = getCurrentGridType();
-            if (gridType) {
-                // Ensure lines are drawn on pixel boundaries for crisp rendering
-                ctx.translate(0.5, 0.5);
-                
-                const dimensions = {
-                    width: config.canvasWidth,
-                    height: config.canvasHeight,
-                    gridSpacing: config.gridSpacing
-                };
-
-                // Create a copy of gridConfig with half the line weight for preview
-                const previewGridConfig = {
-                    ...gridConfig,
-                    lineWeight: gridConfig.lineWeight * 0.5
-                };
-                
-                gridType.draw(ctx, previewGridConfig, dimensions);
-                
-                ctx.translate(-0.5, -0.5);
-            }
-        }
-    }
+// Helper function to save the current state
+function saveCurrentState() {
+    const state = config.viewMode === 'full' ? fullModeState : canvasModeState;
+    state.zoom = getZoom();
+    state.panX = getPanX();
+    state.panY = getPanY();
+    state.filterCache = filterCache.image;
     
-    ctx.globalAlpha = 1; // Reset opacity
+    // Save grid settings
+    state.gridSettings = {
+        type: gridConfig.type,
+        color: gridConfig.color,
+        opacity: gridConfig.opacity,
+        lineWeight: gridConfig.lineWeight,
+        spacing: config.gridSpacing,
+        sizeCm: config.gridSizeCm
+    };
+    
+    // Log state for debugging
+    console.log(`Saved ${config.viewMode} mode state:`, {
+        zoom: state.zoom,
+        panX: state.panX,
+        panY: state.panY,
+        gridSettings: state.gridSettings
+    });
 }
 
-// Initial setup
-document.addEventListener('DOMContentLoaded', () => {
-    // Initialize canvas unit display
-    updateCanvasUnitDisplay();
+// Helper function to restore a saved state
+function restoreState(state) {
+    if (!state) return false;
     
-    // Set initial grid spacing to 5px in full mode
-    config.gridSpacing = 5;
+    // Restore zoom and pan
+    if (typeof state.zoom === 'number' && !isNaN(state.zoom)) {
+        setZoom(state.zoom);
+    }
     
-    // Set default grid style for initial render
-    setDefaultGridStyle(config.viewMode);
+    if (typeof state.panX === 'number' && !isNaN(state.panX)) {
+        setPanX(state.panX);
+    }
     
-    // Update grid spacing and canvas size
-    updateGridSpacing();
-    updateCanvasSize();
+    if (typeof state.panY === 'number' && !isNaN(state.panY)) {
+        setPanY(state.panY);
+    }
     
-    // Initialize grid style listeners and update preview
-    initGridStyleListeners(drawCanvas);
-    updateGridPreview();
+    // Restore filter cache if it exists
+    if (state.filterCache) {
+        filterCache.image = state.filterCache;
+        filterCache.needsUpdate = false;
+    } else {
+        filterCache.needsUpdate = true;
+    }
     
-    // Update grid controls visibility
-    updateGridControlsVisibility(gridConfig.type);
+    // Restore grid settings if they exist
+    if (state.gridSettings) {
+        if (state.gridSettings.type) {
+            gridConfig.type = state.gridSettings.type;
+            // Update grid type in UI
+            const gridTypeSelect = document.getElementById('gridType');
+            if (gridTypeSelect) {
+                gridTypeSelect.value = state.gridSettings.type;
+            }
+        }
+        
+        if (state.gridSettings.color) {
+            gridConfig.color = state.gridSettings.color;
+        }
+        
+        if (typeof state.gridSettings.opacity === 'number') {
+            gridConfig.opacity = state.gridSettings.opacity;
+        }
+        
+        if (state.gridSettings.lineWeight) {
+            gridConfig.lineWeight = state.gridSettings.lineWeight;
+        }
+        
+        if (typeof state.gridSettings.spacing === 'number') {
+            config.gridSpacing = state.gridSettings.spacing;
+        }
+        
+        if (typeof state.gridSettings.sizeCm === 'number') {
+            config.gridSizeCm = state.gridSettings.sizeCm;
+        }
+        
+        // Update grid controls UI
+        updateGridControlsVisibility(gridConfig.type);
+    }
     
-    // Initial resize
-    resizeCanvasToFit();
-});
-
-// Add event listener for 100% zoom button
-document.getElementById('zoom100Btn').addEventListener('click', () => zoomTo100(currentImage, drawCanvas, config));
-
-// View mode control functionality
-const showAllBtn = document.getElementById('showAllBtn');
-const cropToCanvasBtn = document.getElementById('cropToCanvasBtn');
-const canvasWidth = document.getElementById('canvasWidth');
-const canvasHeight = document.getElementById('canvasHeight');
+    // Log state for debugging
+    console.log(`Restored state:`, {
+        zoom: state.zoom,
+        panX: state.panX,
+        panY: state.panY,
+        gridSettings: state.gridSettings
+    });
+    
+    return true;
+}
 
 function updateViewMode(showAll) {
     if (!showAllBtn || !cropToCanvasBtn) return; // Guard against null elements
     
-    showAllBtn.setAttribute('data-active', showAll);
-    cropToCanvasBtn.setAttribute('data-active', !showAll);
+    // If we're already in this mode, don't do anything
+    if ((showAll && config.viewMode === 'full') || (!showAll && config.viewMode === 'canvas')) {
+        return;
+    }
+    
+    // Save current state before switching
+    saveCurrentState();
+    
+    showAllBtn.setAttribute('data-active', showAll ? 'true' : 'false');
+    cropToCanvasBtn.setAttribute('data-active', !showAll ? 'true' : 'false');
     
     // Enable/disable canvas size controls
     if (canvasWidth) canvasWidth.disabled = showAll;
@@ -1095,41 +1042,145 @@ function updateViewMode(showAll) {
     // Update view mode in config
     config.viewMode = showAll ? 'full' : 'canvas';
     
-    // Update UI based on view mode
-    fitToScreenBtn.style.display = showAll ? 'inline-flex' : 'none';
-    zoom100Btn.style.display = showAll ? 'inline-flex' : 'none';
-    resetZoomBtn.style.display = showAll ? 'none' : 'inline-flex';
+    // Update UI based on view mode - Make buttons visible/hidden
+    if (fitToScreenBtn) fitToScreenBtn.style.display = showAll ? 'inline-flex' : 'none';
+    if (zoom100Btn) zoom100Btn.style.display = showAll ? 'inline-flex' : 'none';
+    if (resetZoomBtn) resetZoomBtn.style.display = showAll ? 'none' : 'inline-flex';
     
     // Update canvas if we have an image
     if (currentImage) {
-        // Set default grid size for the new mode
-        setDefaultGridSize();
+        let needsRedraw = false;
         
-        // Update grid size limits and fit to view
-        updateGridSizeLimits();
+        // Store current grid type before updating
+        const currentGridType = gridConfig.type;
+        
+        // Always set default grid size when switching modes to ensure
+        // it's 1/5 of the longest side
+        setDefaultGridSize();
+        needsRedraw = true;
+        
+        // Restore the previous grid type
+        gridConfig.type = currentGridType;
+        
+        // Try to restore previous state for this mode (except for zoom in full mode)
+        const targetState = showAll ? fullModeState : canvasModeState;
+        if (targetState.filterCache) {
+            // Only restore filter cache and grid settings, not zoom/pan for full mode
+            filterCache.image = targetState.filterCache;
+            filterCache.needsUpdate = false;
+            
+            // Restore grid settings if they exist
+            if (targetState.gridSettings) {
+                // Preserve grid type, color, opacity, and line weight
+                if (targetState.gridSettings.color) {
+                    gridConfig.color = targetState.gridSettings.color;
+                }
+                
+                if (typeof targetState.gridSettings.opacity === 'number') {
+                    gridConfig.opacity = targetState.gridSettings.opacity;
+                }
+                
+                if (targetState.gridSettings.lineWeight) {
+                    gridConfig.lineWeight = targetState.gridSettings.lineWeight;
+                }
+                
+                // Don't restore spacing - we want to use the default 1/5th rule
+            }
+        } else {
+            // If we don't have saved state, make sure filters are updated
+            filterCache.needsUpdate = true;
+        }
+        
+        // For canvas mode, restore zoom/pan state if available
+        if (!showAll && targetState.zoom && !isNaN(targetState.zoom)) {
+            setZoom(targetState.zoom);
+            setPanX(targetState.panX || 0);
+            setPanY(targetState.panY || 0);
+        } else {
+            // Reset zoom and pan
+            setZoom(1);
+            setPanX(0);
+            setPanY(0);
+        }
+        
+        // For full image mode, always fit to screen
+        // For canvas mode, always fit to canvas if no saved state
         if (showAll) {
             fitToScreen();
-        } else {
+        } else if (!targetState.zoom || isNaN(targetState.zoom)) {
             fitToCanvas();
         }
-        drawCanvas();
-        resizeCanvasToFit();
+        
+        // Make sure grid settings are properly updated for the mode
+        updateGridSpacing();
+        
+        // Only resize canvas if dimensions actually need to change
+        // Use return value from resizeCanvasToFit to determine if canvas was resized
+        const canvasResized = resizeCanvasToFit();
+        needsRedraw = needsRedraw || canvasResized;
+        
+        // Update grid size limits if needed
+        if (needsRedraw) {
+            updateGridSizeLimits();
+            
+            // Also update the grid UI controls
+            updateGridSliderUI();
+            
+            // Update grid type in UI to reflect current type
+            const gridTypeSelect = document.getElementById('gridType');
+            if (gridTypeSelect) {
+                gridTypeSelect.value = currentGridType;
+            }
+        }
+        
+        // Only redraw if needed
+        if (needsRedraw) {
+            // Use requestAnimationFrame for smoother rendering
+            requestAnimationFrame(() => {
+                drawCanvas();
+            });
+        }
     }
-    
-    // Add cache invalidation when switching modes
-    filterCache.needsUpdate = true;
 }
 
-// Initialize view mode controls
-document.addEventListener('DOMContentLoaded', () => {
-    if (showAllBtn && cropToCanvasBtn) {
-        showAllBtn.addEventListener('click', () => updateViewMode(true));
-        cropToCanvasBtn.addEventListener('click', () => updateViewMode(false));
-        updateViewMode(false); // Initialize with Crop to Canvas mode
+// Helper function to update grid slider UI
+function updateGridSliderUI() {
+    // Update the slider display based on current mode and grid size
+    if (config.viewMode === 'full') {
+        // In full image mode, show pixels
+        if (gridSizeValue) {
+            gridSizeValue.textContent = `${config.gridSpacing} px`;
+        }
+        
+        if (gridSizeSlider) {
+            gridSizeSlider.value = config.gridSpacing;
+        }
+        
+        if (gridSquareSizeInput) {
+            gridSquareSizeInput.value = config.gridSpacing;
+        }
+    } else {
+        // In canvas mode, show cm/in
+        const unit = unitSelect ? unitSelect.value : 'cm';
+        const displayValue = unit === 'in' ? 
+            (config.gridSizeCm / CM_PER_INCH).toFixed(2) : 
+            config.gridSizeCm.toFixed(1);
+            
+        if (gridSizeValue) {
+            gridSizeValue.textContent = `${displayValue} ${unit}`;
+        }
+        
+        if (gridSizeSlider) {
+            gridSizeSlider.value = unit === 'in' ? 
+                (config.gridSizeCm / CM_PER_INCH) : 
+                config.gridSizeCm;
+        }
+        
+        if (gridSquareSizeInput) {
+            gridSquareSizeInput.value = displayValue;
+        }
     }
-    updateGridPreview();
-    updateGridControlsVisibility(gridConfig.type);
-});
+}
 
 // Add event listeners for filter changes
 const filterInputs = document.querySelectorAll('#filtersPanel input[type="range"], #filtersPanel input[type="checkbox"]');
@@ -1284,4 +1335,322 @@ function drawGrid() {
     });
 
     ctx.restore();
-} 
+}
+
+// Initialize buttons and UI controls
+function initializeButtons() {
+    // Ensure buttons are visible if they should be
+    if (fitToScreenBtn) fitToScreenBtn.style.display = config.viewMode === 'full' ? 'inline-flex' : 'none';
+    if (zoom100Btn) zoom100Btn.style.display = config.viewMode === 'full' ? 'inline-flex' : 'none';
+    if (resetZoomBtn) resetZoomBtn.style.display = config.viewMode === 'canvas' ? 'inline-flex' : 'none';
+    
+    // Make sure buttons have event listeners
+    if (fitToScreenBtn) {
+        fitToScreenBtn.addEventListener('click', fitToScreen);
+    }
+    
+    if (zoom100Btn) {
+        zoom100Btn.addEventListener('click', () => zoomTo100(currentImage, drawCanvas, config));
+    }
+    
+    if (resetZoomBtn) {
+        resetZoomBtn.addEventListener('click', () => {
+            if (config.viewMode === 'canvas') {
+                fitToCanvas();
+            } else {
+                resetZoomAndPan(drawCanvas);
+            }
+        });
+    }
+    
+    // Initialize view mode controls
+    if (showAllBtn && cropToCanvasBtn) {
+        // Set initial state for the buttons - ensure canvas mode is active by default
+        showAllBtn.setAttribute('data-active', 'false');
+        cropToCanvasBtn.setAttribute('data-active', 'true');
+        
+        // Set up event listeners
+        showAllBtn.addEventListener('click', () => updateViewMode(true));
+        cropToCanvasBtn.addEventListener('click', () => updateViewMode(false));
+        
+        // Make sure config is consistent with UI
+        config.viewMode = 'canvas';
+    }
+}
+
+// Add this just before the main DOMContentLoaded listener
+function setupEventListeners() {
+    // Add event listener for 100% zoom button
+    const zoom100Button = document.getElementById('zoom100Btn');
+    if (zoom100Button) {
+        zoom100Button.addEventListener('click', () => zoomTo100(currentImage, drawCanvas, config));
+    }
+    
+    // Other event listeners that need explicit initialization can go here
+}
+
+// Main initialization - consolidated from multiple listeners
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize canvas unit display
+    updateCanvasUnitDisplay();
+    
+    // Set initial grid spacing to 5px in full mode
+    config.gridSpacing = 5;
+    
+    // Set default grid style for initial render
+    setDefaultGridStyle(config.viewMode);
+    
+    // Update grid spacing and canvas size
+    updateGridSpacing();
+    updateCanvasSize();
+    
+    // Initialize grid style listeners and update preview
+    initGridStyleListeners(drawCanvas);
+    updateGridPreview();
+    
+    // Update grid controls visibility
+    updateGridControlsVisibility(gridConfig.type);
+    
+    // Initial resize
+    resizeCanvasToFit();
+    
+    // Set up all event listeners
+    setupEventListeners();
+    
+    // Initialize buttons and view mode controls
+    initializeButtons();
+    
+    // Show/hide buttons based on initial mode - explicitly hide/show
+    if (fitToScreenBtn) fitToScreenBtn.style.display = 'none'; // Hidden initially
+    if (zoom100Btn) zoom100Btn.style.display = 'none'; // Hidden initially
+    if (resetZoomBtn) resetZoomBtn.style.display = 'inline-flex'; // Shown initially
+});
+
+// Modify the drawCanvas function to use preview image and cached filters
+function drawCanvas() {
+    // Skip redraw if canvas has 0 width or height
+    if (canvas.width === 0 || canvas.height === 0) return;
+    
+    // Clear canvas with dark background
+    ctx.fillStyle = '#2c2c2e';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw image if one is loaded
+    if (currentImage) {
+        if (config.viewMode === 'full') {
+            // Full image mode
+            ctx.save();
+
+            // Reset transform
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+            // Apply centre translation
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            ctx.translate(centerX, centerY);
+
+            // Apply zoom and pan
+            const userZoom = getZoom();
+            ctx.scale(userZoom, userZoom);
+            ctx.translate(getPanX(), getPanY());
+
+            // Center the image
+            ctx.translate(-currentImage.naturalWidth / 2, -currentImage.naturalHeight / 2);
+
+            // Choose source image: original vs preview
+            const sourceImage = userZoom === 1 ? currentImage : previewImage;
+
+            // Update filter cache if needed
+            if (
+                filterCache.needsUpdate || 
+                !filterCache.image || 
+                filterCache.width !== sourceImage.width || 
+                filterCache.height !== sourceImage.height
+            ) {
+                // Performance optimization: Check if any filters are active
+                const hasActiveFilters = areFiltersActive();
+
+                if (hasActiveFilters) {
+                    const tempCanvas = document.createElement('canvas');
+                    const tempCtx = tempCanvas.getContext('2d');
+
+                    tempCanvas.width = sourceImage.width;
+                    tempCanvas.height = sourceImage.height;
+                    tempCtx.drawImage(sourceImage, 0, 0);
+                    applyFilters(tempCtx, tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
+                    filterCache.image = tempCanvas;
+                } else {
+                    // If no filters are active, just use the source image directly
+                    const tempCanvas = document.createElement('canvas');
+                    const tempCtx = tempCanvas.getContext('2d');
+                    tempCanvas.width = sourceImage.width;
+                    tempCanvas.height = sourceImage.height;
+                    tempCtx.drawImage(sourceImage, 0, 0);
+                    filterCache.image = tempCanvas;
+                }
+                
+                filterCache.width = sourceImage.width;
+                filterCache.height = sourceImage.height;
+                filterCache.needsUpdate = false;
+                
+                // Cache the filter state for this mode
+                if (config.viewMode === 'full') {
+                    fullModeState.filterCache = filterCache.image;
+                } else {
+                    canvasModeState.filterCache = filterCache.image;
+                }
+            }
+
+            // Draw final filtered image
+            ctx.drawImage(filterCache.image, 0, 0, currentImage.naturalWidth, currentImage.naturalHeight);
+            
+            // Restore transform now that we're done with the image
+            ctx.restore();
+            
+            // Draw grid using the current grid type - fixed for full image mode
+            const gridType = getCurrentGridType();
+            if (gridType && gridConfig.type !== 'none') {
+                try {
+                    ctx.save();
+                    
+                    // Set up grid styling for full image mode
+                    ctx.strokeStyle = gridConfig.color || '#ffffff';
+                    ctx.globalAlpha = gridConfig.opacity || 0.5;
+                    ctx.lineWidth = parseFloat(gridConfig.lineWeight) || 1; 
+                    
+                    // Calculate grid dimensions for full image
+                    const zoom = getZoom();
+                    const panX = getPanX();
+                    const panY = getPanY();
+                    
+                    // Calculate visible area of the image
+                    const centerX = canvas.width / 2;
+                    const centerY = canvas.height / 2;
+                    
+                    // Transform grid to match image position
+                    ctx.translate(centerX, centerY);
+                    ctx.scale(zoom, zoom);
+                    ctx.translate(panX, panY);
+                    ctx.translate(-currentImage.naturalWidth / 2, -currentImage.naturalHeight / 2);
+                    
+                    // Draw the grid directly on the image
+                    const dimensions = {
+                        width: currentImage.naturalWidth,
+                        height: currentImage.naturalHeight,
+                        gridSpacing: config.gridSpacing || 20 // Fallback to 20px if not set
+                    };
+                    
+                    gridType.draw(ctx, gridConfig, dimensions);
+                    ctx.restore();
+                } catch (e) {
+                    console.error('Error drawing grid in full image mode:', e);
+                    ctx.restore(); // Ensure we restore in case of error
+                }
+            }
+        } else {
+            // Canvas mode - optimized logic
+            const scale = Math.min(
+                config.canvasWidth / currentImage.width,
+                config.canvasHeight / currentImage.height
+            );
+            
+            const baseWidth = currentImage.width * scale;
+            const baseHeight = currentImage.height * scale;
+            const centerX = (config.canvasWidth - baseWidth) / 2;
+            const centerY = (config.canvasHeight - baseHeight) / 2;
+            
+            const finalWidth = baseWidth * getZoom();
+            const finalHeight = baseHeight * getZoom();
+            const x = centerX + getPanX();
+            const y = centerY + getPanY();
+            
+            // Choose source image: original vs preview based on zoom level
+            const userZoom = getZoom();
+            const sourceImage = userZoom === 1 ? currentImage : previewImage;
+            
+            // Check if we need to update the filter cache
+            if (filterCache.needsUpdate || !filterCache.image || 
+                filterCache.width !== sourceImage.width || 
+                filterCache.height !== sourceImage.height) {
+                
+                // Performance optimization: Check if any filters are active
+                const hasActiveFilters = areFiltersActive();
+                
+                if (hasActiveFilters) {
+                    const tempCanvas = document.createElement('canvas');
+                    const tempCtx = tempCanvas.getContext('2d');
+                    
+                    // Use the preview image's dimensions
+                    tempCanvas.width = sourceImage.width;
+                    tempCanvas.height = sourceImage.height;
+                    
+                    // Draw the source image
+                    tempCtx.drawImage(sourceImage, 0, 0);
+                    applyFilters(tempCtx, tempCanvas, 0, 0, sourceImage.width, sourceImage.height);
+                    filterCache.image = tempCanvas;
+                } else {
+                    // If no filters are active, just use the source image directly
+                    const tempCanvas = document.createElement('canvas');
+                    const tempCtx = tempCanvas.getContext('2d');
+                    tempCanvas.width = sourceImage.width;
+                    tempCanvas.height = sourceImage.height;
+                    tempCtx.drawImage(sourceImage, 0, 0);
+                    filterCache.image = tempCanvas;
+                }
+                
+                filterCache.width = sourceImage.width;
+                filterCache.height = sourceImage.height;
+                filterCache.needsUpdate = false;
+                
+                // Cache the filter state for this mode
+                if (config.viewMode === 'full') {
+                    fullModeState.filterCache = filterCache.image;
+                } else {
+                    canvasModeState.filterCache = filterCache.image;
+                }
+            }
+            
+            // Draw the filtered image with high-quality scaling
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(filterCache.image, x, y, finalWidth, finalHeight);
+            
+            // Draw grid using the current grid type - fixed for canvas mode
+            const gridType = getCurrentGridType();
+            if (gridType && gridConfig.type !== 'none') {
+                try {
+                    ctx.save();
+                    
+                    // Set up grid styling
+                    ctx.strokeStyle = gridConfig.color || '#ffffff';
+                    ctx.globalAlpha = gridConfig.opacity || 0.5;
+                    ctx.lineWidth = parseFloat(gridConfig.lineWeight) || 1;
+                    
+                    // For canvas mode, the grid should align to the canvas edges
+                    // Draw grid covering the entire canvas
+                    const dimensions = {
+                        width: config.canvasWidth,
+                        height: config.canvasHeight,
+                        gridSpacing: config.gridSpacing || 20 // Fallback to 20px if not set
+                    };
+                    
+                    gridType.draw(ctx, gridConfig, dimensions);
+                    ctx.restore();
+                } catch (e) {
+                    console.error('Error drawing grid in canvas mode:', e);
+                    ctx.restore(); // Ensure we restore in case of error
+                }
+            }
+        }
+    }
+    
+    ctx.globalAlpha = 1; // Reset opacity
+}
+
+// View mode control functionality
+const showAllBtn = document.getElementById('showAllBtn');
+const cropToCanvasBtn = document.getElementById('cropToCanvasBtn');
+const canvasWidth = document.getElementById('canvasWidth');
+const canvasHeight = document.getElementById('canvasHeight');
+
+// ... existing code ... 

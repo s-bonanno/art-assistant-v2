@@ -19,24 +19,58 @@ export const filterCache = {
     lastFilters: null
 };
 
+// Debounce function to improve performance
+function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        const context = this;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(context, args), wait);
+    };
+}
+
 // Helper function to check if filters have changed
 function haveFiltersChanged() {
     if (!filterCache.lastFilters) return true;
     
     // Check light values
     if (filters.light) {
+        // If filter isn't active, no need to check values
+        if (!filters.light.active && !filterCache.lastLightValues.active) return false;
+        
+        // If active state changed, filters have changed
         if (filters.light.active !== filterCache.lastLightValues.active) return true;
-        if (filters.light.exposure !== filterCache.lastLightValues.exposure) return true;
-        if (filters.light.contrast !== filterCache.lastLightValues.contrast) return true;
-        if (filters.light.highlights !== filterCache.lastLightValues.highlights) return true;
-        if (filters.light.shadows !== filterCache.lastLightValues.shadows) return true;
+        
+        // Only check values if filter is active
+        if (filters.light.active) {
+            if (filters.light.exposure !== filterCache.lastLightValues.exposure) return true;
+            if (filters.light.contrast !== filterCache.lastLightValues.contrast) return true;
+            if (filters.light.highlights !== filterCache.lastLightValues.highlights) return true;
+            if (filters.light.shadows !== filterCache.lastLightValues.shadows) return true;
+        }
     }
     
     return false;
 }
 
+// Helper function to check if any filters are actually active and have non-zero values
+export function areFiltersActive() {
+    return filters.light && filters.light.active && (
+        filters.light.exposure !== 0 || 
+        filters.light.contrast !== 0 || 
+        filters.light.highlights !== 0 || 
+        filters.light.shadows !== 0
+    );
+}
+
 // Apply filters to canvas
 export function applyFilters(ctx, canvas, x, y, width, height) {
+    // First check if any filters are actually active
+    if (!areFiltersActive()) {
+        // No active filters, skip processing
+        return;
+    }
+    
     // Check if we need to update the cache
     if (!filterCache.needsUpdate && 
         filterCache.width === width && 
@@ -45,6 +79,7 @@ export function applyFilters(ctx, canvas, x, y, width, height) {
         return; // Use cached result
     }
     
+    // Get image data only once
     const imageData = ctx.getImageData(x, y, width, height);
     const data = imageData.data;
     
@@ -64,8 +99,32 @@ export function applyFilters(ctx, canvas, x, y, width, height) {
     filterCache.needsUpdate = false;
 }
 
-// Apply light adjustments
+// Apply light adjustments with optimized processing
 function applyLightAdjustments(data, lightValues) {
+    // Quick check to avoid processing when no adjustments are needed
+    if (lightValues.exposure === 0 && lightValues.contrast === 0 && 
+        lightValues.highlights === 0 && lightValues.shadows === 0) {
+        return;
+    }
+    
+    // Pre-calculate factors to avoid repeated calculations in the loop
+    const exposureFactor = 1 + (lightValues.exposure / 100);
+    const contrastFactor = 1 + (lightValues.contrast / 100);
+    const shadowFactor = 1 + (lightValues.shadows / 100);
+    const highlightFactor = 1 + (lightValues.highlights / 100);
+    
+    // Use optimized version if only exposure is active
+    if (lightValues.contrast === 0 && lightValues.highlights === 0 && lightValues.shadows === 0) {
+        // Fast path for exposure-only adjustment
+        for (let i = 0; i < data.length; i += 4) {
+            data[i] = Math.min(255, Math.max(0, data[i] * exposureFactor));
+            data[i + 1] = Math.min(255, Math.max(0, data[i + 1] * exposureFactor));
+            data[i + 2] = Math.min(255, Math.max(0, data[i + 2] * exposureFactor));
+        }
+        return;
+    }
+    
+    // Full processing path
     for (let i = 0; i < data.length; i += 4) {
         // Store original values
         const r = data[i];
@@ -76,33 +135,32 @@ function applyLightAdjustments(data, lightValues) {
         const luminance = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
 
         // Apply exposure (convert from percentage to factor)
-        const exposureFactor = 1 + (lightValues.exposure / 100);
         let newR = Math.min(255, Math.max(0, r * exposureFactor));
         let newG = Math.min(255, Math.max(0, g * exposureFactor));
         let newB = Math.min(255, Math.max(0, b * exposureFactor));
 
         // Apply contrast (convert from percentage to factor)
-        const contrastFactor = 1 + (lightValues.contrast / 100);
-        const avg = (newR + newG + newB) / 3;
-        newR = Math.min(255, Math.max(0, avg + (newR - avg) * contrastFactor));
-        newG = Math.min(255, Math.max(0, avg + (newG - avg) * contrastFactor));
-        newB = Math.min(255, Math.max(0, avg + (newB - avg) * contrastFactor));
+        if (contrastFactor !== 1) {
+            const avg = (newR + newG + newB) / 3;
+            newR = Math.min(255, Math.max(0, avg + (newR - avg) * contrastFactor));
+            newG = Math.min(255, Math.max(0, avg + (newG - avg) * contrastFactor));
+            newB = Math.min(255, Math.max(0, avg + (newB - avg) * contrastFactor));
+        }
 
         // Calculate smooth blending weights for highlights and shadows
-        const shadowWeight = Math.pow(Math.max(0, 1 - luminance * 2), 1.5); // 1 → 0 as luminance goes from 0 → 0.5
-        const highlightWeight = Math.pow(Math.max(0, (luminance - 0.5) * 2), 1.5); // 0 → 1 as luminance goes from 0.5 → 1
+        // Only calculate these if either highlights or shadows are active
+        if (highlightFactor !== 1 || shadowFactor !== 1) {
+            const shadowWeight = Math.pow(Math.max(0, 1 - luminance * 2), 1.5); // 1 → 0 as luminance goes from 0 → 0.5
+            const highlightWeight = Math.pow(Math.max(0, (luminance - 0.5) * 2), 1.5); // 0 → 1 as luminance goes from 0.5 → 1
 
-        // Calculate adjustment factors
-        const shadowFactor = 1 + (lightValues.shadows / 100);
-            const highlightFactor = 1 + (lightValues.highlights / 100);
+            // Calculate adjustment factors
+            const blendFactor = 1 + (shadowWeight * (shadowFactor - 1)) + (highlightWeight * (highlightFactor - 1));
 
-        // Apply smooth blending
-        const blendFactor = 1 + (shadowWeight * (shadowFactor - 1)) + (highlightWeight * (highlightFactor - 1));
-
-        // Apply the blended adjustment
-        newR = Math.min(255, Math.max(0, newR * blendFactor));
-        newG = Math.min(255, Math.max(0, newG * blendFactor));
-        newB = Math.min(255, Math.max(0, newB * blendFactor));
+            // Apply the blended adjustment
+            newR = Math.min(255, Math.max(0, newR * blendFactor));
+            newG = Math.min(255, Math.max(0, newG * blendFactor));
+            newB = Math.min(255, Math.max(0, newB * blendFactor));
+        }
 
         // Update the pixel data
         data[i] = newR;
@@ -158,6 +216,12 @@ function createFilterResetListener(filterId, filterState, sliderConfigs, drawCan
 function createFilterSliderListeners(filterId, filterState, sliderConfigs, drawCanvas) {
     const toggle = document.getElementById(`${filterId}FilterToggle`);
     
+    // Create a debounced draw function
+    const debouncedDraw = debounce(() => {
+        filterCache.needsUpdate = true;
+        requestAnimationFrame(drawCanvas);
+    }, 16); // Debounce to match 60fps
+    
     sliderConfigs.forEach(({ id, min, max, step }) => {
         const slider = document.getElementById(id);
         const valueDisplay = document.getElementById(`${id}Value`);
@@ -167,15 +231,27 @@ function createFilterSliderListeners(filterId, filterState, sliderConfigs, drawC
             slider.value = filterState[id];
             valueDisplay.textContent = filterState[id];
 
+            // Handle realtime preview with input event (when dragging)
             slider.addEventListener('input', (e) => {
+                // Update the visual display immediately for better UX
+                valueDisplay.textContent = e.target.value;
+                
                 // Auto-activate the filter if it's inactive and a slider is moved
                 if (!filterState.active && toggle) {
                     filterState.active = true;
                     toggle.checked = true;
                 }
                 
+                // Update the filter state
                 filterState[id] = parseInt(e.target.value);
-                valueDisplay.textContent = e.target.value;
+                
+                // Use the debounced draw function for smoother performance
+                debouncedDraw();
+            });
+            
+            // Also handle change event (when released) to ensure final state is captured
+            slider.addEventListener('change', (e) => {
+                filterState[id] = parseInt(e.target.value);
                 filterCache.needsUpdate = true;
                 drawCanvas();
             });
