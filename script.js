@@ -838,24 +838,28 @@ exportBtn.addEventListener('click', () => {
         const x = (centerX + getPanX()) * scaleFactor;
         const y = (centerY + getPanY()) * scaleFactor;
         
-        // Choose source image: original vs preview
-        const userZoom = getZoom();
-        const sourceImage = userZoom === 1 ? currentImage : previewImage;
+        // Always use the original high-resolution image for export, regardless of zoom level
+        const sourceImage = currentImage;
         
         // Create a temporary canvas for the image and filters
         const tempCanvas = document.createElement('canvas');
         const tempCtx = tempCanvas.getContext('2d');
         
-        // Calculate scale to maintain preview image's aspect ratio
-        const previewScale = Math.min(
+        // Calculate scale to maintain original image's aspect ratio
+        const outputScale = Math.min(
             finalWidth / sourceImage.width,
             finalHeight / sourceImage.height
         );
-        const scaledWidth = sourceImage.width * previewScale;
-        const scaledHeight = sourceImage.height * previewScale;
+        const scaledWidth = sourceImage.width * outputScale;
+        const scaledHeight = sourceImage.height * outputScale;
         
         tempCanvas.width = scaledWidth;
         tempCanvas.height = scaledHeight;
+        
+        // Enable high quality image scaling
+        tempCtx.imageSmoothingEnabled = true;
+        tempCtx.imageSmoothingQuality = 'high';
+        
         tempCtx.drawImage(sourceImage, 0, 0, scaledWidth, scaledHeight);
         
         // Only apply filters if any are active
@@ -1062,33 +1066,44 @@ function updateViewMode(showAll) {
         // Restore the previous grid type
         gridConfig.type = currentGridType;
         
+        // Always mark filter cache as needing update when switching modes
+        filterCache.needsUpdate = true;
+        
         // Try to restore previous state for this mode (except for zoom in full mode)
         const targetState = showAll ? fullModeState : canvasModeState;
-        if (targetState.filterCache) {
-            // Only restore filter cache and grid settings, not zoom/pan for full mode
-            filterCache.image = targetState.filterCache;
-            filterCache.needsUpdate = false;
+        
+        // Only restore filter cache from previous state if it exists and matches current dimensions
+        if (targetState.filterCache && 
+            targetState.filterCache.width === (showAll ? currentImage.naturalWidth : previewImage.width) && 
+            targetState.filterCache.height === (showAll ? currentImage.naturalHeight : previewImage.height)) {
             
-            // Restore grid settings if they exist
-            if (targetState.gridSettings) {
-                // Preserve grid type, color, opacity, and line weight
-                if (targetState.gridSettings.color) {
-                    gridConfig.color = targetState.gridSettings.color;
-                }
-                
-                if (typeof targetState.gridSettings.opacity === 'number') {
-                    gridConfig.opacity = targetState.gridSettings.opacity;
-                }
-                
-                if (targetState.gridSettings.lineWeight) {
-                    gridConfig.lineWeight = targetState.gridSettings.lineWeight;
-                }
-                
-                // Don't restore spacing - we want to use the default 1/5th rule
-            }
-        } else {
-            // If we don't have saved state, make sure filters are updated
+            // Restore filter cache
+            filterCache.image = targetState.filterCache;
+            
+            // Still mark cache as needing update to ensure filters are applied
             filterCache.needsUpdate = true;
+        } else {
+            // If we don't have saved state or dimensions don't match, make sure filters are updated
+            filterCache.needsUpdate = true;
+            filterCache.image = null;
+        }
+        
+        // Restore grid settings if they exist
+        if (targetState.gridSettings) {
+            // Preserve grid type, color, opacity, and line weight
+            if (targetState.gridSettings.color) {
+                gridConfig.color = targetState.gridSettings.color;
+            }
+            
+            if (typeof targetState.gridSettings.opacity === 'number') {
+                gridConfig.opacity = targetState.gridSettings.opacity;
+            }
+            
+            if (targetState.gridSettings.lineWeight) {
+                gridConfig.lineWeight = targetState.gridSettings.lineWeight;
+            }
+            
+            // Don't restore spacing - we want to use the default 1/5th rule
         }
         
         // For canvas mode, restore zoom/pan state if available
