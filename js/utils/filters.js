@@ -109,7 +109,7 @@ function applyLightAdjustments(data, lightValues) {
     
     // Pre-calculate factors to avoid repeated calculations in the loop
     const exposureFactor = 1 + (lightValues.exposure / 100);
-    const contrastFactor = 1 + (lightValues.contrast / 100);
+    const contrastValue = lightValues.contrast;
     const shadowFactor = 1 + (lightValues.shadows / 100);
     const highlightFactor = 1 + (lightValues.highlights / 100);
     
@@ -139,12 +139,33 @@ function applyLightAdjustments(data, lightValues) {
         let newG = Math.min(255, Math.max(0, g * exposureFactor));
         let newB = Math.min(255, Math.max(0, b * exposureFactor));
 
-        // Apply contrast (convert from percentage to factor)
-        if (contrastFactor !== 1) {
-            const avg = (newR + newG + newB) / 3;
-            newR = Math.min(255, Math.max(0, avg + (newR - avg) * contrastFactor));
-            newG = Math.min(255, Math.max(0, avg + (newG - avg) * contrastFactor));
-            newB = Math.min(255, Math.max(0, avg + (newB - avg) * contrastFactor));
+        // Apply enhanced contrast with smoother steps
+        if (contrastValue !== 0) {
+            // Use a progressive factor that increases more gradually
+            // For small values (0-20), apply minimal contrast
+            // For medium values (20-60), apply moderate contrast
+            // For high values (60-100), apply stronger contrast
+            
+            let factor;
+            const absContrast = Math.abs(contrastValue);
+            
+            if (absContrast <= 20) {
+                // Very subtle contrast changes for small values
+                factor = 1 + (contrastValue / 200); // Range: 0.9 to 1.1 for -20 to 20
+            } else if (absContrast <= 60) {
+                // Medium contrast changes
+                const baseChange = contrastValue > 0 ? 0.1 : -0.1;
+                const additionalChange = (contrastValue / 100) * 0.8; // More gradual increase
+                factor = 1 + baseChange + additionalChange;
+            } else {
+                // Stronger contrast for high values
+                factor = 1 + (contrastValue / 50); // Range: 0 to 3 for -100 to 100
+            }
+            
+            // Apply contrast with 128 as midpoint
+            newR = Math.min(255, Math.max(0, 128 + (newR - 128) * factor));
+            newG = Math.min(255, Math.max(0, 128 + (newG - 128) * factor));
+            newB = Math.min(255, Math.max(0, 128 + (newB - 128) * factor));
         }
 
         // Calculate smooth blending weights for highlights and shadows
