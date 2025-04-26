@@ -29,6 +29,14 @@ import { convertToUnit, convertFromUnit } from './js/utils/unitConversion.js';
 import { gridConfig, updateColorSwatchSelection, setDefaultGridStyle, initGridStyleListeners, getCurrentGridType, updateGridPreview } from './js/utils/gridStyle.js';
 import { filters, filterCache, applyFilters, initFilterListeners, areFiltersActive } from './js/utils/filters.js';
 import { getZoom, setZoom, getPanX, setPanX, getPanY, setPanY, resetZoomAndPan, zoomTo100, initZoomPanListeners, calculateGridSizeLimits } from './js/utils/zoomPan.js';
+import { canvasSizePresets, initCanvasPresetSelector, resetPresetToCustom } from './js/utils/canvasPresets.js';
+import { 
+    updateGridSizeDisplay as updateGridSizeDisplayUtil,
+    updateGridSpacing as updateGridSpacingUtil,
+    updateGridSliderUI as updateGridSliderUIUtil,
+    updateGridControlsVisibility as updateGridControlsVisibilityUtil,
+    drawGrid as drawGridUtil
+} from './js/utils/gridManager.js';
 
 let currentImage = null;
 let isDragging = false;
@@ -48,60 +56,32 @@ let config = {
     viewMode: 'canvas' // Current view mode
 };
 
-// Canvas size presets
-const canvasSizePresets = {
-    // Standard Paper
-    'a4': { width: 21.0, height: 29.7 },
-    'a3': { width: 29.7, height: 42.0 },
-    'a2': { width: 42.0, height: 59.4 },
-    'a1': { width: 59.4, height: 84.1 },
-    'a0': { width: 84.1, height: 118.9 },
-    
-    // Common Painting
-    'small': { width: 20.0, height: 25.0 },
-    'medium': { width: 30.0, height: 40.0 },
-    'large': { width: 50.0, height: 70.0 },
-    
-    // Square
-    'square-small': { width: 20.0, height: 20.0 },
-    'square-medium': { width: 30.0, height: 30.0 },
-    'square-large': { width: 50.0, height: 50.0 },
-    
-    // Common Ratios
-    'ratio-16-9': { width: 32.0, height: 18.0 },
-    'ratio-4-3': { width: 28.0, height: 21.0 },
-    'ratio-8-10': { width: 24.0, height: 30.0 },
-    'ratio-5-7': { width: 25.0, height: 35.0 },
-    'ratio-3-4': { width: 30.0, height: 40.0 },
-    
-    // Traditional
-    'quarter-imperial': { width: 22.9, height: 30.5 },
-    'half-imperial': { width: 30.5, height: 45.7 },
-    'imperial': { width: 45.7, height: 61.0 }
-};
-
-// Add event listener for canvas size preset
-const canvasSizePreset = document.getElementById('canvasSizePreset');
-if (canvasSizePreset) {
-    canvasSizePreset.addEventListener('change', (e) => {
-        const preset = e.target.value;
-        if (preset === 'custom') return;
+// Initialize canvas size preset selector
+if (canvasWidthInput && canvasHeightInput) {
+    initCanvasPresetSelector(canvasWidthInput, canvasHeightInput, (size) => {
+        // Update the config and redraw
+        config.canvasWidthCm = size.width;
+        config.canvasHeightCm = size.height;
+        updateCanvasSize();
+        drawCanvas();
         
-        const size = canvasSizePresets[preset];
-        if (size) {
-            // Update the width and height inputs
-            canvasWidthInput.value = size.width;
-            canvasHeightInput.value = size.height;
-            
-            // Update the config and redraw
-            config.canvasWidthCm = size.width;
-            config.canvasHeightCm = size.height;
-            updateCanvasSize();
-            drawCanvas();
-            
-            // Update orientation
-            updateOrientation();
-        }
+        // Update orientation
+        updateOrientation();
+    });
+}
+
+// Add event listeners for width/height inputs to reset to custom
+if (canvasWidthInput) {
+    canvasWidthInput.addEventListener('input', () => {
+        resetPresetToCustom();
+        document.getElementById('canvasSizePreset').value = 'custom';
+    });
+}
+
+if (canvasHeightInput) {
+    canvasHeightInput.addEventListener('input', () => {
+        resetPresetToCustom();
+        document.getElementById('canvasSizePreset').value = 'custom';
     });
 }
 
@@ -138,12 +118,6 @@ tabButtons.forEach(button => {
 
 // Initialize with Size tab active
 switchTab('size');
-
-function updateGridSizeDisplay() {
-    const unit = unitSelect.value;
-    const size = convertToUnit(config.gridSizeCm, unit);
-    gridSizeDisplay.textContent = `${size.toFixed(unit === 'in' ? 2 : 1)} ${unit}`;
-}
 
 function updateCanvasUnitDisplay() {
     const unit = canvasUnitSelect.value;
@@ -534,32 +508,7 @@ imageInput.addEventListener('change', (e) => {
 });
 
 function updateGridSpacing() {
-    if (config.viewMode === 'full') {
-        // In full image mode, use pixels directly
-        config.gridSpacing = parseFloat(gridSizeSlider.value);
-        gridSizeValue.textContent = `${config.gridSpacing} px`;
-        unitSelect.value = 'px';
-    } else {
-        // Canvas mode - existing logic
-        const gridSizeInCm = unitSelect.value === 'in' ? 
-            parseFloat(gridSquareSizeInput.value) * CM_PER_INCH : 
-            parseFloat(gridSquareSizeInput.value);
-        
-        // Calculate pixels per centimeter
-        const pixelsPerCm = config.canvasWidth / config.canvasWidthCm;
-        
-        // Set grid spacing in pixels
-        config.gridSpacing = gridSizeInCm * pixelsPerCm;
-        
-        // Update slider value to match input
-        gridSizeSlider.value = gridSquareSizeInput.value;
-        gridSizeValue.textContent = `${gridSquareSizeInput.value} ${unitSelect.value}`;
-    }
-    
-    // Redraw canvas if an image is loaded
-    if (currentImage) {
-        drawCanvas();
-    }
+    updateGridSpacingUtil(config, unitSelect, gridSquareSizeInput, gridSizeSlider, gridSizeValue, drawCanvas, currentImage);
 }
 
 // Event listeners for configuration changes
@@ -1160,41 +1109,7 @@ function updateViewMode(showAll) {
 
 // Helper function to update grid slider UI
 function updateGridSliderUI() {
-    // Update the slider display based on current mode and grid size
-    if (config.viewMode === 'full') {
-        // In full image mode, show pixels
-        if (gridSizeValue) {
-            gridSizeValue.textContent = `${config.gridSpacing} px`;
-        }
-        
-        if (gridSizeSlider) {
-            gridSizeSlider.value = config.gridSpacing;
-        }
-        
-        if (gridSquareSizeInput) {
-            gridSquareSizeInput.value = config.gridSpacing;
-        }
-    } else {
-        // In canvas mode, show cm/in
-        const unit = unitSelect ? unitSelect.value : 'cm';
-        const displayValue = unit === 'in' ? 
-            (config.gridSizeCm / CM_PER_INCH).toFixed(2) : 
-            config.gridSizeCm.toFixed(1);
-            
-        if (gridSizeValue) {
-            gridSizeValue.textContent = `${displayValue} ${unit}`;
-        }
-        
-        if (gridSizeSlider) {
-            gridSizeSlider.value = unit === 'in' ? 
-                (config.gridSizeCm / CM_PER_INCH) : 
-                config.gridSizeCm;
-        }
-        
-        if (gridSquareSizeInput) {
-            gridSquareSizeInput.value = displayValue;
-        }
-    }
+    updateGridSliderUIUtil(config, unitSelect, gridSizeValue, gridSizeSlider, gridSquareSizeInput);
 }
 
 // Add event listeners for filter changes
@@ -1204,15 +1119,6 @@ filterInputs.forEach(input => {
         filterCache.needsUpdate = true;
         drawCanvas();
     });
-});
-
-// Add event listeners for width/height inputs to reset to custom
-canvasWidthInput.addEventListener('input', () => {
-    document.getElementById('canvasSizePreset').value = 'custom';
-});
-
-canvasHeightInput.addEventListener('input', () => {
-    document.getElementById('canvasSizePreset').value = 'custom';
 });
 
 function updateOrientation() {
@@ -1241,11 +1147,7 @@ function updateOrientation() {
 
 // Update grid controls visibility based on type
 function updateGridControlsVisibility(gridType) {
-    const controls = document.querySelectorAll('[data-grid-control="square-only"]');
-    controls.forEach(control => {
-        // Only show size controls for square grid
-        control.style.display = gridType === 'square' ? 'block' : 'none';
-    });
+    updateGridControlsVisibilityUtil(gridType);
 }
 
 // Modify the grid type change handler
@@ -1327,29 +1229,7 @@ const gridTypes = {
 };
 
 function drawGrid() {
-    if (!config.showGrid) return;
-
-    const gridType = getCurrentGridType();
-    if (!gridType) return;
-
-    ctx.save();
-    
-    // Reset transform to draw grid in screen space
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    
-    // Set up grid style
-    ctx.strokeStyle = gridConfig.color;
-    ctx.globalAlpha = gridConfig.opacity;
-    ctx.lineWidth = 1;
-
-    // Draw grid using the current grid type
-    gridType.draw(ctx, gridConfig, {
-        width: canvas.width,
-        height: canvas.height,
-        gridSpacing: gridConfig.spacing
-    });
-
-    ctx.restore();
+    drawGridUtil(ctx, config, gridConfig, canvas);
 }
 
 // Initialize buttons and UI controls
@@ -1405,40 +1285,51 @@ function setupEventListeners() {
 }
 
 // Main initialization - consolidated from multiple listeners
-document.addEventListener('DOMContentLoaded', () => {
-    // Initialize canvas unit display
-    updateCanvasUnitDisplay();
-    
-    // Set initial grid spacing to 5px in full mode
-    config.gridSpacing = 5;
-    
-    // Set default grid style for initial render
-    setDefaultGridStyle(config.viewMode);
-    
-    // Update grid spacing and canvas size
-    updateGridSpacing();
-    updateCanvasSize();
-    
-    // Initialize grid style listeners and update preview
-    initGridStyleListeners(drawCanvas);
-    updateGridPreview();
-    
-    // Update grid controls visibility
-    updateGridControlsVisibility(gridConfig.type);
-    
-    // Initial resize
-    resizeCanvasToFit();
-    
-    // Set up all event listeners
-    setupEventListeners();
-    
-    // Initialize buttons and view mode controls
-    initializeButtons();
-    
-    // Show/hide buttons based on initial mode - explicitly hide/show
-    if (fitToScreenBtn) fitToScreenBtn.style.display = 'none'; // Hidden initially
-    if (zoom100Btn) zoom100Btn.style.display = 'none'; // Hidden initially
-    if (resetZoomBtn) resetZoomBtn.style.display = 'inline-flex'; // Shown initially
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        // Wait for all resources to be loaded
+        await new Promise(resolve => {
+            if (document.readyState === 'complete') {
+                resolve();
+            } else {
+                window.addEventListener('load', resolve);
+            }
+        });
+
+        // Initialize canvas unit display
+        updateCanvasUnitDisplay();
+        
+        // Set initial grid spacing to 5px in full mode
+        config.gridSpacing = 5;
+        
+        // Set default grid style for initial render
+        setDefaultGridStyle(config.viewMode);
+        
+        // Update grid spacing and canvas size
+        updateGridSpacing();
+        updateCanvasSize();
+        
+        // Initialize grid style listeners and update preview
+        initGridStyleListeners(drawCanvas);
+        updateGridPreview();
+        
+        // Update grid controls visibility
+        updateGridControlsVisibility(gridConfig.type);
+        
+        // Initialize buttons and view mode controls
+        initializeButtons();
+        
+        // Set up all event listeners
+        setupEventListeners();
+        
+        // Initial resize
+        resizeCanvasToFit();
+        
+        // Draw initial canvas
+        drawCanvas();
+    } catch (error) {
+        console.error('Initialization error:', error);
+    }
 });
 
 // Modify the drawCanvas function to use preview image and cached filters
@@ -1668,4 +1559,9 @@ const cropToCanvasBtn = document.getElementById('cropToCanvasBtn');
 const canvasWidth = document.getElementById('canvasWidth');
 const canvasHeight = document.getElementById('canvasHeight');
 
-// ... existing code ... 
+// Update the function to use the renamed import
+function updateGridSizeDisplay() {
+    updateGridSizeDisplayUtil(unitSelect, config, gridSizeDisplay);
+}
+
+// ... rest of the code ... 
