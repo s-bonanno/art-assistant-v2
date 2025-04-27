@@ -8,6 +8,10 @@ export class SliderInteractionManager {
         this.isDragging = false;
         this.backgroundClass = options.backgroundClass || 'bg-zinc-850';
         this.borderClass = options.borderClass || 'border-zinc-800';
+        this.dragThreshold = options.dragThreshold || 5; // Default threshold of 5 pixels
+        this.startX = 0;
+        this.startY = 0;
+        this.hasMoved = false;
 
         if (!this.container) {
             console.error(`Container not found: ${containerSelector}`);
@@ -43,24 +47,65 @@ export class SliderInteractionManager {
         
         this.isDragging = true;
         this.activeSlider = event.target;
+        this.hasMoved = false;
         
-        // Fade out all elements except the active slider
-        this.fadeOutUI();
+        // Record starting position
+        if (event.type === 'mousedown') {
+            this.startX = event.clientX;
+            this.startY = event.clientY;
+            document.addEventListener('mousemove', this.handleMove);
+        } else if (event.type === 'touchstart') {
+            this.startX = event.touches[0].clientX;
+            this.startY = event.touches[0].clientY;
+            document.addEventListener('touchmove', this.handleMove);
+        }
+    }
+    
+    handleMove = (event) => {
+        if (!this.isDragging) return;
+        
+        // Get current position
+        let currentX, currentY;
+        if (event.type === 'mousemove') {
+            currentX = event.clientX;
+            currentY = event.clientY;
+        } else if (event.type === 'touchmove') {
+            currentX = event.touches[0].clientX;
+            currentY = event.touches[0].clientY;
+        }
+        
+        // Check if we've moved beyond the threshold
+        if (!this.hasMoved) {
+            const deltaX = Math.abs(currentX - this.startX);
+            const deltaY = Math.abs(currentY - this.startY);
+            
+            if (deltaX > this.dragThreshold || deltaY > this.dragThreshold) {
+                this.hasMoved = true;
+                this.fadeOutUI();
+            }
+        }
     }
     
     handleEnd(event) {
         if (!this.isDragging) return;
         
+        // Remove document-level event listeners
+        document.removeEventListener('mousemove', this.handleMove);
+        document.removeEventListener('touchmove', this.handleMove);
+        
+        // Only fade in if we actually moved
+        if (this.hasMoved) {
+            this.fadeInUI();
+        }
+        
         this.isDragging = false;
         this.activeSlider = null;
-        
-        // Fade in all elements
-        this.fadeInUI();
+        this.hasMoved = false;
     }
     
     handleClick(event) {
-        // If we're not already dragging, simulate a quick fade out/in
-        if (!this.isDragging) {
+        // If we're not already dragging and haven't moved, simulate a quick fade out/in
+        if (!this.isDragging && !this.hasMoved) {
             this.handleStart(event);
             setTimeout(() => this.handleEnd(event), this.fadeDuration);
         }
@@ -147,6 +192,11 @@ export class SliderInteractionManager {
     
     // Cleanup method to remove event listeners
     destroy() {
+        // Remove document-level event listeners
+        document.removeEventListener('mousemove', this.handleMove);
+        document.removeEventListener('touchmove', this.handleMove);
+        
+        // Remove slider event listeners
         this.sliders.forEach(slider => {
             slider.removeEventListener('mousedown', this.handleStart);
             slider.removeEventListener('mouseup', this.handleEnd);

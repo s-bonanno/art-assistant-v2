@@ -1499,4 +1499,20 @@ const panelManagers = {
     })
 };
 
+// Add event listeners for filter value displays
+const filterValueDisplays = document.querySelectorAll('[id$="Value"]');
+filterValueDisplays.forEach(display => {
+    display.addEventListener('click', () => {
+        const resetValue = display.getAttribute('data-reset-value');
+        const sliderId = display.id.replace('Value', '');
+        const slider = document.getElementById(sliderId);
+        
+        if (slider) {
+            slider.value = resetValue;
+            slider.dispatchEvent(new Event('input'));
+            slider.dispatchEvent(new Event('change'));
+        }
+    });
+});
+
 // ... rest of the code ... 

@@ -6,7 +6,8 @@ export class FilterManager {
             width: 0,
             height: 0,
             needsUpdate: true,
-            lastFilterStates: new Map()
+            lastFilterStates: new Map(),
+            lastCanvasSize: { width: 0, height: 0 }
         };
         this._debouncedDraw = null;
         
@@ -17,10 +18,18 @@ export class FilterManager {
 
     // Add a method to invalidate cache when canvas dimensions change
     invalidateCache() {
-        this.cache.imageData = null;
-        this.cache.width = 0;
-        this.cache.height = 0;
-        this.cache.needsUpdate = true;
+        // Only invalidate if the canvas size has actually changed
+        if (this.cache.lastCanvasSize.width !== this._tempCanvas.width ||
+            this.cache.lastCanvasSize.height !== this._tempCanvas.height) {
+            this.cache.imageData = null;
+            this.cache.width = 0;
+            this.cache.height = 0;
+            this.cache.needsUpdate = true;
+            this.cache.lastCanvasSize = {
+                width: this._tempCanvas.width,
+                height: this._tempCanvas.height
+            };
+        }
     }
 
     // Register a new filter
@@ -35,10 +44,10 @@ export class FilterManager {
     // Apply all active filters to the image data
     applyFilters(ctx, canvas, x, y, width, height) {
         // Check if we need to update the cache
-        if (this.cache.needsUpdate || 
-            this.cache.width !== width || 
-            this.cache.height !== height) {
-            
+        const filtersChanged = this._haveFiltersChanged();
+        const sizeChanged = this.cache.width !== width || this.cache.height !== height;
+        
+        if (this.cache.needsUpdate || filtersChanged || sizeChanged) {
             // Resize temporary canvas if needed
             if (this._tempCanvas.width !== width || this._tempCanvas.height !== height) {
                 this._tempCanvas.width = width;
@@ -63,6 +72,7 @@ export class FilterManager {
             this.cache.width = width;
             this.cache.height = height;
             this.cache.needsUpdate = false;
+            this._updateFilterStates();
             
             // Draw the processed image data back to the canvas
             ctx.putImageData(imageData, x, y);
@@ -80,10 +90,22 @@ export class FilterManager {
 
             if (filter.active !== lastState.active) return true;
 
-            // Only check properties that are actually used by the filter
-            const relevantProps = Object.keys(filter.properties);
-            for (const prop of relevantProps) {
-                if (filter.properties[prop] !== lastState.properties[prop]) return true;
+            // Check all properties, not just the relevant ones
+            const currentProps = filter.properties;
+            const lastProps = lastState.properties;
+            
+            // Check if any properties have changed
+            for (const prop in currentProps) {
+                if (currentProps[prop] !== lastProps[prop]) {
+                    return true;
+                }
+            }
+            
+            // Check if any properties were removed
+            for (const prop in lastProps) {
+                if (!(prop in currentProps)) {
+                    return true;
+                }
             }
         }
         return false;
@@ -106,6 +128,7 @@ export class FilterManager {
             filter.reset();
         }
         this.cache.needsUpdate = true;
+        this._updateFilterStates();
     }
 
     // Get a specific filter by name
@@ -134,7 +157,7 @@ export class FilterManager {
         return function(...args) {
             const context = this;
             clearTimeout(timeout);
-            timeout = setTimeout(() => callback.apply(context, args), 16); // Match 60fps
+            timeout = setTimeout(() => callback.apply(context, args), 32); // Reduced to 30fps for better performance
         };
     }
 
