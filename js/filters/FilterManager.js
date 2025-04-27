@@ -49,15 +49,19 @@ export class FilterManager {
         // Get active filters
         const lightFilter = this.filters.get('light');
         const hueSatFilter = this.filters.get('hueSaturation');
+        const shapeFilter = this.filters.get('shape');
         
-        if (!lightFilter?.active && !hueSatFilter?.active) return imageData;
-
-        // Apply light adjustments first
+        // Apply shape filter first if active
+        if (shapeFilter?.active) {
+            shapeFilter.apply(imageData);
+        }
+        
+        // Then apply light adjustments if active
         if (lightFilter?.active) {
             lightFilter.apply(imageData);
         }
         
-        // Then apply color adjustments
+        // Finally apply color adjustments if active
         if (hueSatFilter?.active) {
             hueSatFilter.apply(imageData);
         }
@@ -94,6 +98,10 @@ export class FilterManager {
             filter.active = active;
             if (properties) {
                 Object.assign(filter.properties, properties);
+            }
+            // Always invalidate cache for shape filter changes
+            if (filterName === 'shape') {
+                this.cache.needsUpdate = true;
             }
             this.invalidateCache();
         }

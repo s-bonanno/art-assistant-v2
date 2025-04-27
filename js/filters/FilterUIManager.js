@@ -117,9 +117,21 @@ export class FilterUIManager {
             { id: 'shadows', min: -100, max: 100, step: 1 }
         ];
 
-        this.initFilterControls('light', lightSliderConfigs);
+        // Hue/Saturation filter configuration
+        const hueSaturationSliderConfigs = [
+            { id: 'saturation', min: -100, max: 100, step: 1 },
+            { id: 'temperature', min: -100, max: 100, step: 1 }
+        ];
 
-        // Add other filter configurations here as needed
+        // Shape filter configuration
+        const shapeSliderConfigs = [
+            { id: 'notanBands', min: 2, max: 8, step: 1 },
+            { id: 'shapeOpacity', min: 0, max: 100, step: 1 }
+        ];
+
+        this.initFilterControls('light', lightSliderConfigs);
+        this.initFilterControls('hueSaturation', hueSaturationSliderConfigs);
+        this.initFilterControls('shape', shapeSliderConfigs);
     }
 
     // Set the callback for when filters change

@@ -564,6 +564,7 @@
                 <div class="tab-group">
                     <button class="tab-button active" data-tab="lightTab">Light</button>
                     <button class="tab-button" data-tab="hueSaturationTab">Colour</button>
+                    <button class="tab-button" data-tab="shapeTab">Shape</button>
                 </div>
 
                 <!-- Light Tab -->
@@ -664,6 +665,45 @@
                                     class="w-full">
                                 <span class="text-[10px] text-zinc-500">Warm</span>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Shape Tab -->
+                <div class="tab-content hidden" id="shapeTab">
+                    <div class="space-y-3">
+                        <!-- Active Toggle and Reset Button -->
+                        <div class="flex items-center justify-between pb-2 border-b border-zinc-800/50">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-xs text-zinc-400">Active</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="shapeFilterToggle" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-zinc-800 hover:bg-zinc-700 rounded-full peer peer-checked:bg-zinc-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-zinc-400 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full peer-checked:after:bg-white"></div>
+                                </label>
+                            </div>
+                            <button id="shapeFilterReset" class="text-xs text-zinc-400 hover:text-zinc-200 transition-colors duration-200">
+                                Reset
+                            </button>
+                        </div>
+
+                        <!-- Notan Bands -->
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-zinc-400">Notan Bands</span>
+                                <span class="text-xs text-zinc-400 cursor-pointer hover:text-zinc-200 transition-colors duration-200" id="notanBandsValue" data-reset-value="3">3</span>
+                            </div>
+                            <input type="range" id="notanBands" min="2" max="8" step="1" value="3"
+                                class="w-full">
+                        </div>
+
+                        <!-- Opacity -->
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-zinc-400">Opacity</span>
+                                <span class="text-xs text-zinc-400 cursor-pointer hover:text-zinc-200 transition-colors duration-200" id="shapeOpacityValue" data-reset-value="100">100%</span>
+                            </div>
+                            <input type="range" id="shapeOpacity" min="0" max="100" step="1" value="100"
+                                class="w-full">
                         </div>
                     </div>
                 </div>
