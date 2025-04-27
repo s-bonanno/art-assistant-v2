@@ -8,8 +8,20 @@ export function updateGridSizeDisplay(unitSelect, config, gridSizeDisplay) {
 export function updateGridSpacing(config, unitSelect, gridSquareSizeInput, gridSizeSlider, gridSizeValue, drawCanvas, currentImage) {
     if (config.viewMode === 'full') {
         // In full image mode, use pixels directly
-        config.gridSpacing = parseFloat(gridSizeSlider.value);
-        gridSizeValue.textContent = `${config.gridSpacing} px`;
+        // Use input value if it exists, otherwise use slider value
+        const newValue = gridSquareSizeInput ? parseFloat(gridSquareSizeInput.value) : parseFloat(gridSizeSlider.value);
+        config.gridSpacing = newValue;
+        
+        // Update both input and slider to match
+        if (gridSquareSizeInput) {
+            gridSquareSizeInput.value = newValue;
+        }
+        if (gridSizeSlider) {
+            gridSizeSlider.value = newValue;
+        }
+        if (gridSizeValue) {
+            gridSizeValue.textContent = `${newValue} px`;
+        }
         unitSelect.value = 'px';
     } else {
         // Canvas mode - existing logic
