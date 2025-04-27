@@ -703,54 +703,54 @@ exportBtn.addEventListener('click', () => {
     const exportCanvas = document.createElement('canvas');
     const exportCtx = exportCanvas.getContext('2d');
     
-    if (config.viewMode === 'full') {
-        // In full image mode, use the original image dimensions
-        exportCanvas.width = currentImage.naturalWidth;
-        exportCanvas.height = currentImage.naturalHeight;
+    if (config.viewMode === 'grid') {
+        // Grid mode - export the entire grid
+        const gridWidth = config.gridSize * config.gridSpacing;
+        const gridHeight = config.gridSize * config.gridSpacing;
+        
+        // Set export canvas size to match grid dimensions
+        exportCanvas.width = gridWidth;
+        exportCanvas.height = gridHeight;
         
         // Clear export canvas with dark background
         exportCtx.fillStyle = '#2c2c2e';
         exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
         
-        // Create a temporary canvas for the image and filters
-        const tempCanvas = document.createElement('canvas');
-        const tempCtx = tempCanvas.getContext('2d');
-        tempCanvas.width = currentImage.naturalWidth;
-        tempCanvas.height = currentImage.naturalHeight;
-
-        // Draw the full image to temp canvas
-        tempCtx.drawImage(currentImage, 0, 0);
-
-        // Apply filters if any are active
-        if (filterManager.areFiltersActive()) {
-            filterManager.applyFilters(tempCtx, tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
-        }
-
-        // Draw the filtered image to export canvas
-        exportCtx.drawImage(tempCanvas, 0, 0);
+        // Draw grid lines
+        exportCtx.strokeStyle = '#ffffff';
+        exportCtx.lineWidth = 1;
         
-        // Draw grid using current grid type
-        const gridType = getCurrentGridType();
-        if (gridType) {
-            exportCtx.save();
-            
-            // Set up grid styling
-            exportCtx.strokeStyle = gridConfig.color;
-            exportCtx.globalAlpha = gridConfig.opacity;
-            exportCtx.lineWidth = gridConfig.lineWeight;
-            
-            // Draw grid using the current grid type
-            const dimensions = {
-                width: exportCanvas.width,
-                height: exportCanvas.height,
-                gridSpacing: config.gridSpacing
-            };
-            gridType.draw(exportCtx, gridConfig, dimensions);
-            
-            exportCtx.restore();
+        // Draw vertical lines
+        for (let i = 0; i <= config.gridSize; i++) {
+            const x = i * config.gridSpacing;
+            exportCtx.beginPath();
+            exportCtx.moveTo(x, 0);
+            exportCtx.lineTo(x, gridHeight);
+            exportCtx.stroke();
         }
         
-        exportCtx.globalAlpha = 1; // Reset opacity
+        // Draw horizontal lines
+        for (let i = 0; i <= config.gridSize; i++) {
+            const y = i * config.gridSpacing;
+            exportCtx.beginPath();
+            exportCtx.moveTo(0, y);
+            exportCtx.lineTo(gridWidth, y);
+            exportCtx.stroke();
+        }
+        
+        // Draw grid numbers
+        exportCtx.fillStyle = '#ffffff';
+        exportCtx.font = '12px Arial';
+        exportCtx.textAlign = 'center';
+        exportCtx.textBaseline = 'middle';
+        
+        for (let i = 0; i < config.gridSize; i++) {
+            for (let j = 0; j < config.gridSize; j++) {
+                const x = (i + 0.5) * config.gridSpacing;
+                const y = (j + 0.5) * config.gridSpacing;
+                exportCtx.fillText(`${i+1},${j+1}`, x, y);
+            }
+        }
     } else {
         // Canvas mode - existing export logic
         exportCanvas.width = EXPORT_SIZE;
