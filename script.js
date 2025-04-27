@@ -335,7 +335,8 @@ function fitToCanvas() {
     setPanY(0);
     
     // Redraw canvas
-    drawCanvas();
+
+    console.log("Fit to canvas 2");
 }
 
 // Update grid size limits
@@ -677,11 +678,7 @@ canvas.addEventListener('mouseleave', () => {
 
 // Add event listener for reset zoom button
 resetZoomBtn.addEventListener('click', () => {
-    if (config.viewMode === 'canvas') {
-        fitToCanvas();
-    } else {
-        resetZoomAndPan(drawCanvas);
-    }
+    resetZoomAndPan(drawCanvas);
 });
 
 // Add keyboard shortcuts for zooming
@@ -1224,11 +1221,7 @@ function initializeButtons() {
     
     if (resetZoomBtn) {
         resetZoomBtn.addEventListener('click', () => {
-            if (config.viewMode === 'canvas') {
-                fitToCanvas();
-            } else {
-                resetZoomAndPan(drawCanvas);
-            }
+            resetZoomAndPan(drawCanvas);
         });
     }
     

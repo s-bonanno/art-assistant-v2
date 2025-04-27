@@ -148,35 +148,71 @@ export class FilterManager {
             const lastState = this.cache.lastFilterStates.get(name);
             if (!lastState) return true;
 
+            // Quick check for active state change
             if (filter.active !== lastState.active) return true;
+            
+            // Skip property checks if filter is not active
+            if (!filter.active) continue;
 
-            // Check all properties, not just the relevant ones
             const currentProps = filter.properties;
             const lastProps = lastState.properties;
             
-            // Check if any properties have changed
-            for (const prop in currentProps) {
-                if (currentProps[prop] !== lastProps[prop]) {
-                    return true;
-                }
-            }
-            
-            // Check if any properties were removed
-            for (const prop in lastProps) {
-                if (!(prop in currentProps)) {
-                    return true;
-                }
+            // Only check properties that affect output
+            switch (name) {
+                case 'light':
+                    if (currentProps.exposure !== lastProps.exposure ||
+                        currentProps.contrast !== lastProps.contrast ||
+                        currentProps.highlights !== lastProps.highlights ||
+                        currentProps.shadows !== lastProps.shadows) {
+                        return true;
+                    }
+                    break;
+                    
+                case 'hueSaturation':
+                    if (currentProps.saturation !== lastProps.saturation ||
+                        currentProps.temperature !== lastProps.temperature) {
+                        return true;
+                    }
+                    break;
+                    
+                case 'shape':
+                    if (currentProps.notanBands !== lastProps.notanBands ||
+                        currentProps.shapeOpacity !== lastProps.shapeOpacity) {
+                        return true;
+                    }
+                    break;
             }
         }
         return false;
     }
 
-    // Update the cached filter states
+    // Update the cached filter states more efficiently
     _updateFilterStates() {
         for (const [name, filter] of this.filters) {
+            // Only store properties that affect output
+            const properties = {};
+            switch (name) {
+                case 'light':
+                    properties.exposure = filter.properties.exposure;
+                    properties.contrast = filter.properties.contrast;
+                    properties.highlights = filter.properties.highlights;
+                    properties.shadows = filter.properties.shadows;
+                    break;
+                    
+                case 'hueSaturation':
+                    properties.saturation = filter.properties.saturation;
+                    properties.temperature = filter.properties.temperature;
+                    break;
+                    
+                case 'shape':
+                    properties.notanBands = filter.properties.notanBands;
+                    properties.shapeOpacity = filter.properties.shapeOpacity;
+                    break;
+            }
+            
             this.cache.lastFilterStates.set(name, {
                 active: filter.active,
-                properties: { ...filter.properties }
+                properties
             });
         }
     }
