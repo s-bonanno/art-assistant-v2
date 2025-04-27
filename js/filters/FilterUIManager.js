@@ -2,6 +2,7 @@ export class FilterUIManager {
     constructor(filterManager) {
         this.filterManager = filterManager;
         this.controls = new Map();
+        this.onFilterChange = null;
     }
 
     // Initialize UI controls for a filter
@@ -36,7 +37,6 @@ export class FilterUIManager {
             toggleElement.addEventListener('change', (e) => {
                 filter.active = e.target.checked;
                 this.filterManager.cache.needsUpdate = true;
-                // Trigger redraw (this should be passed as a callback)
                 if (this.onFilterChange) {
                     this.onFilterChange();
                 }
@@ -81,6 +81,11 @@ export class FilterUIManager {
                 slider.value = filter.getProperty(id);
                 valueDisplay.textContent = filter.getProperty(id);
 
+                // Set min, max, and step attributes
+                slider.min = min;
+                slider.max = max;
+                slider.step = step;
+
                 slider.addEventListener('input', (e) => {
                     // Auto-activate the filter if it's inactive
                     if (!filter.active) {
@@ -100,6 +105,21 @@ export class FilterUIManager {
                 });
             }
         });
+    }
+
+    // Initialize all filter controls
+    initAllFilterControls() {
+        // Light filter configuration
+        const lightSliderConfigs = [
+            { id: 'exposure', min: -100, max: 100, step: 1 },
+            { id: 'contrast', min: -100, max: 100, step: 1 },
+            { id: 'highlights', min: -100, max: 100, step: 1 },
+            { id: 'shadows', min: -100, max: 100, step: 1 }
+        ];
+
+        this.initFilterControls('light', lightSliderConfigs);
+
+        // Add other filter configurations here as needed
     }
 
     // Set the callback for when filters change

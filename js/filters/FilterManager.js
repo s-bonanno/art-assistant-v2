@@ -8,6 +8,9 @@ export class FilterManager {
             needsUpdate: true,
             lastFilterStates: new Map()
         };
+        this._debouncedDraw = null;
+        this._tempCanvas = document.createElement('canvas');
+        this._tempCtx = this._tempCanvas.getContext('2d');
     }
 
     // Register a new filter
@@ -26,10 +29,18 @@ export class FilterManager {
             this.cache.width === width && 
             this.cache.height === height && 
             !this._haveFiltersChanged()) {
-            return; // Use cached result
+            // Use cached result
+            ctx.putImageData(this.cache.imageData, x, y);
+            return;
         }
 
-        const imageData = ctx.getImageData(x, y, width, height);
+        // Set up temporary canvas
+        this._tempCanvas.width = width;
+        this._tempCanvas.height = height;
+        this._tempCtx.drawImage(canvas, x, y, width, height, 0, 0, width, height);
+
+        // Get image data once
+        const imageData = this._tempCtx.getImageData(0, 0, width, height);
         let processedImageData = imageData;
 
         // Apply each active filter in sequence
@@ -39,9 +50,14 @@ export class FilterManager {
             }
         }
 
-        ctx.putImageData(processedImageData, x, y);
+        // Put the processed image data back to the temporary canvas
+        this._tempCtx.putImageData(processedImageData, 0, 0);
+
+        // Draw the processed image to the target canvas
+        ctx.drawImage(this._tempCanvas, 0, 0, width, height, x, y, width, height);
 
         // Update cache
+        this.cache.imageData = processedImageData;
         this.cache.width = width;
         this.cache.height = height;
         this.cache.needsUpdate = false;
@@ -56,8 +72,10 @@ export class FilterManager {
 
             if (filter.active !== lastState.active) return true;
 
-            for (const [prop, value] of Object.entries(filter.properties)) {
-                if (value !== lastState.properties[prop]) return true;
+            // Only check properties that are actually used by the filter
+            const relevantProps = Object.keys(filter.properties);
+            for (const prop of relevantProps) {
+                if (filter.properties[prop] !== lastState.properties[prop]) return true;
             }
         }
         return false;
@@ -85,5 +103,37 @@ export class FilterManager {
     // Get a specific filter by name
     getFilter(name) {
         return this.filters.get(name);
+    }
+
+    // Check if any filters are active and have non-zero values
+    areFiltersActive() {
+        for (const filter of this.filters.values()) {
+            if (filter.active && filter.hasChanged()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Set the debounced draw callback
+    setDebouncedDraw(callback) {
+        this._debouncedDraw = this._createDebouncedDraw(callback);
+    }
+
+    // Create a debounced draw function
+    _createDebouncedDraw(callback) {
+        let timeout;
+        return function(...args) {
+            const context = this;
+            clearTimeout(timeout);
+            timeout = setTimeout(() => callback.apply(context, args), 16); // Match 60fps
+        };
+    }
+
+    // Trigger a debounced draw
+    triggerDebouncedDraw() {
+        if (this._debouncedDraw) {
+            this._debouncedDraw();
+        }
     }
 } 

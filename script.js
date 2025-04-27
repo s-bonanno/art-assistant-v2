@@ -27,7 +27,6 @@ const EXPORT_SIZE = 2400; // Size of the exported image
 const CM_PER_INCH = 2.54; // Conversion factor for inches to centimeters
 import { convertToUnit, convertFromUnit } from './js/utils/unitConversion.js';
 import { gridConfig, updateColorSwatchSelection, setDefaultGridStyle, initGridStyleListeners, getCurrentGridType, updateGridPreview } from './js/utils/gridStyle.js';
-import { filters, filterCache, applyFilters, initFilterListeners, areFiltersActive } from './js/utils/filters.js';
 import { getZoom, setZoom, getPanX, setPanX, getPanY, setPanY, resetZoomAndPan, zoomTo100, initZoomPanListeners, calculateGridSizeLimits } from './js/utils/zoomPan.js';
 import { canvasSizePresets, initCanvasPresetSelector, resetPresetToCustom } from './js/utils/canvasPresets.js';
 import { 
@@ -37,6 +36,7 @@ import {
     updateGridControlsVisibility as updateGridControlsVisibilityUtil,
     drawGrid as drawGridUtil
 } from './js/utils/gridManager.js';
+import { initFilters, filterManager } from './js/filters/init.js';
 
 let currentImage = null;
 let isDragging = false;
@@ -302,8 +302,8 @@ function setDefaultGridSize() {
 // Initialize grid style listeners
 initGridStyleListeners(drawCanvas);
 
-// Initialize filter listeners
-initFilterListeners(drawCanvas);
+// Initialize filters
+initFilters(drawCanvas);
 
 // Initialize zoom and pan listeners
 let zoomPanInitialized = false;
@@ -481,7 +481,7 @@ imageInput.addEventListener('change', (e) => {
                 setPanY(0);
                 config.imageOffsetXPercent = 0;
                 config.imageOffsetYPercent = 0;
-                filterCache.needsUpdate = true;
+                filterManager.cache.needsUpdate = true;
                 
                 // Set default grid size based on image dimensions
                 setDefaultGridSize();
@@ -723,14 +723,9 @@ exportBtn.addEventListener('click', () => {
         // Draw the full image to temp canvas
         tempCtx.drawImage(currentImage, 0, 0);
 
-        // Apply filters to temp canvas if any filters are active
-        const hasActiveFilters = Object.values(filters).some(f => 
-            (f.enabled !== undefined && f.enabled) || // For filters with enabled property
-            (f.exposure !== undefined && (f.exposure !== 0 || f.contrast !== 0 || f.highlights !== 0 || f.shadows !== 0)) // For light adjustments
-        );
-
-        if (hasActiveFilters) {
-            applyFilters(tempCtx, tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
+        // Apply filters if any are active
+        if (filterManager.areFiltersActive()) {
+            filterManager.applyFilters(tempCtx, tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
         }
 
         // Draw the filtered image to export canvas
@@ -811,14 +806,9 @@ exportBtn.addEventListener('click', () => {
         
         tempCtx.drawImage(sourceImage, 0, 0, scaledWidth, scaledHeight);
         
-        // Only apply filters if any are active
-        const hasActiveFilters = Object.values(filters).some(f => 
-            (f.enabled !== undefined && f.enabled) || 
-            (f.exposure !== undefined && (f.exposure !== 0 || f.contrast !== 0 || f.highlights !== 0 || f.shadows !== 0))
-        );
-        
-        if (hasActiveFilters) {
-            applyFilters(tempCtx, tempCanvas, 0, 0, scaledWidth, scaledHeight);
+        // Apply filters if any are active
+        if (filterManager.areFiltersActive()) {
+            filterManager.applyFilters(tempCtx, tempCanvas, 0, 0, scaledWidth, scaledHeight);
         }
 
         // Draw the filtered image to export canvas
@@ -878,7 +868,7 @@ function saveCurrentState() {
     state.zoom = getZoom();
     state.panX = getPanX();
     state.panY = getPanY();
-    state.filterCache = filterCache.image;
+    state.filterCache = filterManager.cache.imageData;
     
     // Save grid settings
     state.gridSettings = {
@@ -918,10 +908,10 @@ function restoreState(state) {
     
     // Restore filter cache if it exists
     if (state.filterCache) {
-        filterCache.image = state.filterCache;
-        filterCache.needsUpdate = false;
+        filterManager.cache.imageData = state.filterCache;
+        filterManager.cache.needsUpdate = false;
     } else {
-        filterCache.needsUpdate = true;
+        filterManager.cache.needsUpdate = true;
     }
     
     // Restore grid settings if they exist
@@ -1016,7 +1006,7 @@ function updateViewMode(showAll) {
         gridConfig.type = currentGridType;
         
         // Always mark filter cache as needing update when switching modes
-        filterCache.needsUpdate = true;
+        filterManager.cache.needsUpdate = true;
         
         // Try to restore previous state for this mode (except for zoom in full mode)
         const targetState = showAll ? fullModeState : canvasModeState;
@@ -1027,14 +1017,14 @@ function updateViewMode(showAll) {
             targetState.filterCache.height === (showAll ? currentImage.naturalHeight : previewImage.height)) {
             
             // Restore filter cache
-            filterCache.image = targetState.filterCache;
+            filterManager.cache.imageData = targetState.filterCache;
             
             // Still mark cache as needing update to ensure filters are applied
-            filterCache.needsUpdate = true;
+            filterManager.cache.needsUpdate = true;
         } else {
             // If we don't have saved state or dimensions don't match, make sure filters are updated
-            filterCache.needsUpdate = true;
-            filterCache.image = null;
+            filterManager.cache.needsUpdate = true;
+            filterManager.cache.imageData = null;
         }
         
         // Restore grid settings if they exist
@@ -1052,57 +1042,21 @@ function updateViewMode(showAll) {
                 gridConfig.lineWeight = targetState.gridSettings.lineWeight;
             }
             
-            // Don't restore spacing - we want to use the default 1/5th rule
-        }
-        
-        // For canvas mode, restore zoom/pan state if available
-        if (!showAll && targetState.zoom && !isNaN(targetState.zoom)) {
-            setZoom(targetState.zoom);
-            setPanX(targetState.panX || 0);
-            setPanY(targetState.panY || 0);
-        } else {
-            // Reset zoom and pan
-            setZoom(1);
-            setPanX(0);
-            setPanY(0);
-        }
-        
-        // For full image mode, always fit to screen
-        // For canvas mode, always fit to canvas if no saved state
-        if (showAll) {
-            fitToScreen();
-        } else if (!targetState.zoom || isNaN(targetState.zoom)) {
-            fitToCanvas();
-        }
-        
-        // Make sure grid settings are properly updated for the mode
-        updateGridSpacing();
-        
-        // Only resize canvas if dimensions actually need to change
-        // Use return value from resizeCanvasToFit to determine if canvas was resized
-        const canvasResized = resizeCanvasToFit();
-        needsRedraw = needsRedraw || canvasResized;
-        
-        // Update grid size limits if needed
-        if (needsRedraw) {
-            updateGridSizeLimits();
+            if (typeof targetState.gridSettings.spacing === 'number') {
+                config.gridSpacing = targetState.gridSettings.spacing;
+            }
             
-            // Also update the grid UI controls
-            updateGridSliderUI();
-            
-            // Update grid type in UI to reflect current type
-            const gridTypeSelect = document.getElementById('gridType');
-            if (gridTypeSelect) {
-                gridTypeSelect.value = currentGridType;
+            if (typeof targetState.gridSettings.sizeCm === 'number') {
+                config.gridSizeCm = targetState.gridSettings.sizeCm;
             }
         }
         
-        // Only redraw if needed
+        // Update grid controls UI
+        updateGridControlsVisibility(gridConfig.type);
+        
+        // Redraw if needed
         if (needsRedraw) {
-            // Use requestAnimationFrame for smoother rendering
-            requestAnimationFrame(() => {
-                drawCanvas();
-            });
+            drawCanvas();
         }
     }
 }
@@ -1116,7 +1070,7 @@ function updateGridSliderUI() {
 const filterInputs = document.querySelectorAll('#filtersPanel input[type="range"], #filtersPanel input[type="checkbox"]');
 filterInputs.forEach(input => {
     input.addEventListener('change', () => {
-        filterCache.needsUpdate = true;
+        filterManager.cache.needsUpdate = true;
         drawCanvas();
     });
 });
@@ -1366,49 +1320,20 @@ function drawCanvas() {
             // Choose source image: original vs preview
             const sourceImage = userZoom === 1 ? currentImage : previewImage;
 
-            // Update filter cache if needed
-            if (
-                filterCache.needsUpdate || 
-                !filterCache.image || 
-                filterCache.width !== sourceImage.width || 
-                filterCache.height !== sourceImage.height
-            ) {
-                // Performance optimization: Check if any filters are active
-                const hasActiveFilters = areFiltersActive();
+            // Create a temporary canvas for the image and filters
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = sourceImage.width;
+            tempCanvas.height = sourceImage.height;
+            tempCtx.drawImage(sourceImage, 0, 0);
 
-                if (hasActiveFilters) {
-                    const tempCanvas = document.createElement('canvas');
-                    const tempCtx = tempCanvas.getContext('2d');
-
-                    tempCanvas.width = sourceImage.width;
-                    tempCanvas.height = sourceImage.height;
-                    tempCtx.drawImage(sourceImage, 0, 0);
-                    applyFilters(tempCtx, tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
-                    filterCache.image = tempCanvas;
-                } else {
-                    // If no filters are active, just use the source image directly
-                    const tempCanvas = document.createElement('canvas');
-                    const tempCtx = tempCanvas.getContext('2d');
-                    tempCanvas.width = sourceImage.width;
-                    tempCanvas.height = sourceImage.height;
-                    tempCtx.drawImage(sourceImage, 0, 0);
-                    filterCache.image = tempCanvas;
-                }
-                
-                filterCache.width = sourceImage.width;
-                filterCache.height = sourceImage.height;
-                filterCache.needsUpdate = false;
-                
-                // Cache the filter state for this mode
-                if (config.viewMode === 'full') {
-                    fullModeState.filterCache = filterCache.image;
-                } else {
-                    canvasModeState.filterCache = filterCache.image;
-                }
+            // Apply filters if any are active
+            if (filterManager.areFiltersActive()) {
+                filterManager.applyFilters(tempCtx, tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
             }
 
             // Draw final filtered image
-            ctx.drawImage(filterCache.image, 0, 0, currentImage.naturalWidth, currentImage.naturalHeight);
+            ctx.drawImage(tempCanvas, 0, 0, currentImage.naturalWidth, currentImage.naturalHeight);
             
             // Restore transform now that we're done with the image
             ctx.restore();
@@ -1474,52 +1399,22 @@ function drawCanvas() {
             const userZoom = getZoom();
             const sourceImage = userZoom === 1 ? currentImage : previewImage;
             
-            // Check if we need to update the filter cache
-            if (filterCache.needsUpdate || !filterCache.image || 
-                filterCache.width !== sourceImage.width || 
-                filterCache.height !== sourceImage.height) {
-                
-                // Performance optimization: Check if any filters are active
-                const hasActiveFilters = areFiltersActive();
-                
-                if (hasActiveFilters) {
-                    const tempCanvas = document.createElement('canvas');
-                    const tempCtx = tempCanvas.getContext('2d');
-                    
-                    // Use the preview image's dimensions
-                    tempCanvas.width = sourceImage.width;
-                    tempCanvas.height = sourceImage.height;
-                    
-                    // Draw the source image
-                    tempCtx.drawImage(sourceImage, 0, 0);
-                    applyFilters(tempCtx, tempCanvas, 0, 0, sourceImage.width, sourceImage.height);
-                    filterCache.image = tempCanvas;
-                } else {
-                    // If no filters are active, just use the source image directly
-                    const tempCanvas = document.createElement('canvas');
-                    const tempCtx = tempCanvas.getContext('2d');
-                    tempCanvas.width = sourceImage.width;
-                    tempCanvas.height = sourceImage.height;
-                    tempCtx.drawImage(sourceImage, 0, 0);
-                    filterCache.image = tempCanvas;
-                }
-                
-                filterCache.width = sourceImage.width;
-                filterCache.height = sourceImage.height;
-                filterCache.needsUpdate = false;
-                
-                // Cache the filter state for this mode
-                if (config.viewMode === 'full') {
-                    fullModeState.filterCache = filterCache.image;
-                } else {
-                    canvasModeState.filterCache = filterCache.image;
-                }
+            // Create a temporary canvas for the image and filters
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = sourceImage.width;
+            tempCanvas.height = sourceImage.height;
+            tempCtx.drawImage(sourceImage, 0, 0);
+            
+            // Apply filters if any are active
+            if (filterManager.areFiltersActive()) {
+                filterManager.applyFilters(tempCtx, tempCanvas, 0, 0, sourceImage.width, sourceImage.height);
             }
             
             // Draw the filtered image with high-quality scaling
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = 'high';
-            ctx.drawImage(filterCache.image, x, y, finalWidth, finalHeight);
+            ctx.drawImage(tempCanvas, x, y, finalWidth, finalHeight);
             
             // Draw grid using the current grid type - fixed for canvas mode
             const gridType = getCurrentGridType();

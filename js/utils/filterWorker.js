@@ -1,6 +1,8 @@
+import { LightFilter } from '../filters/LightFilter.js';
+
 // Web Worker for filter processing
 self.onmessage = function(e) {
-    const { imageData, filters, width, height } = e.data;
+    const { imageData, filterStates, width, height } = e.data;
     
     // Create a new ImageData object to avoid modifying the original
     const processedImageData = new ImageData(
@@ -9,9 +11,12 @@ self.onmessage = function(e) {
         height
     );
     
-    // Apply light adjustments if active
-    if (filters.light && filters.light.active) {
-        applyLightAdjustments(processedImageData.data, filters.light);
+    // Create filter instances based on the filter states
+    const lightFilter = new LightFilter();
+    if (filterStates.light) {
+        lightFilter.active = filterStates.light.active;
+        lightFilter.properties = { ...filterStates.light.properties };
+        processedImageData = lightFilter.apply(processedImageData);
     }
     
     // Send processed data back to main thread
