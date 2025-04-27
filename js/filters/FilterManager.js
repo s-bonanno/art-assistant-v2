@@ -13,6 +13,14 @@ export class FilterManager {
         this._tempCtx = this._tempCanvas.getContext('2d');
     }
 
+    // Add a method to invalidate cache when canvas dimensions change
+    invalidateCache() {
+        this.cache.imageData = null;
+        this.cache.width = 0;
+        this.cache.height = 0;
+        this.cache.needsUpdate = true;
+    }
+
     // Register a new filter
     registerFilter(filter) {
         this.filters.set(filter.name, filter);

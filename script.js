@@ -985,6 +985,9 @@ function updateViewMode(showAll) {
     // Update view mode in config
     config.viewMode = showAll ? 'full' : 'canvas';
     
+    // Invalidate filter cache when switching modes
+    filterManager.invalidateCache();
+    
     // Update UI based on view mode - Make buttons visible/hidden
     if (fitToScreenBtn) fitToScreenBtn.style.display = showAll ? 'inline-flex' : 'none';
     if (zoom100Btn) zoom100Btn.style.display = showAll ? 'inline-flex' : 'none';
@@ -992,7 +995,8 @@ function updateViewMode(showAll) {
     
     // Update canvas if we have an image
     if (currentImage) {
-        let needsRedraw = false;
+        // First resize the canvas to fit the new mode
+        const wasResized = resizeCanvasToFit();
         
         // Store current grid type before updating
         const currentGridType = gridConfig.type;
@@ -1000,16 +1004,25 @@ function updateViewMode(showAll) {
         // Always set default grid size when switching modes to ensure
         // it's 1/5 of the longest side
         setDefaultGridSize();
-        needsRedraw = true;
         
         // Restore the previous grid type
         gridConfig.type = currentGridType;
         
-        // Always mark filter cache as needing update when switching modes
-        filterManager.cache.needsUpdate = true;
-        
-        // Try to restore previous state for this mode (except for zoom in full mode)
+        // Try to restore previous state for this mode
         const targetState = showAll ? fullModeState : canvasModeState;
+        
+        // Restore zoom and pan state when switching to canvas mode
+        if (!showAll && targetState) {
+            if (typeof targetState.zoom === 'number' && !isNaN(targetState.zoom)) {
+                setZoom(targetState.zoom);
+            }
+            if (typeof targetState.panX === 'number' && !isNaN(targetState.panX)) {
+                setPanX(targetState.panX);
+            }
+            if (typeof targetState.panY === 'number' && !isNaN(targetState.panY)) {
+                setPanY(targetState.panY);
+            }
+        }
         
         // Only restore filter cache from previous state if it exists and matches current dimensions
         if (targetState.filterCache && 
@@ -1021,10 +1034,6 @@ function updateViewMode(showAll) {
             
             // Still mark cache as needing update to ensure filters are applied
             filterManager.cache.needsUpdate = true;
-        } else {
-            // If we don't have saved state or dimensions don't match, make sure filters are updated
-            filterManager.cache.needsUpdate = true;
-            filterManager.cache.imageData = null;
         }
         
         // Restore grid settings if they exist
@@ -1054,8 +1063,18 @@ function updateViewMode(showAll) {
         // Update grid controls UI
         updateGridControlsVisibility(gridConfig.type);
         
-        // Redraw if needed
-        if (needsRedraw) {
+        // If switching to full mode, fit the image to screen
+        if (showAll) {
+            fitToScreen();
+        }
+        
+        // If canvas was resized or we need to redraw, do it now
+        if (wasResized) {
+            // Add a small delay to ensure canvas has been properly resized
+            setTimeout(() => {
+                drawCanvas();
+            }, 0);
+        } else {
             drawCanvas();
         }
     }
