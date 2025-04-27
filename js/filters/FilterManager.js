@@ -14,31 +14,89 @@ export class FilterManager {
         // Create reusable temporary canvas and context
         this._tempCanvas = document.createElement('canvas');
         this._tempCtx = this._tempCanvas.getContext('2d', { willReadFrequently: true });
+        
+        // Pre-allocate LUTs for better performance
+        this._contrastLUT = new Uint8Array(256);
+        this._lastContrastValue = null;
+    }
+
+    // Update contrast LUT if needed
+    _updateContrastLUT(contrastValue) {
+        if (this._lastContrastValue === contrastValue) return;
+        this._lastContrastValue = contrastValue;
+
+        if (contrastValue === 0) {
+            for (let i = 0; i < 256; i++) this._contrastLUT[i] = i;
+            return;
+        }
+
+        const center = 128;
+        const factor = contrastValue > 0 
+            ? 1 + (contrastValue / 50)
+            : 1 / (1 + Math.abs(contrastValue) / 50);
+
+        for (let i = 0; i < 256; i++) {
+            const centered = i - center;
+            const adjusted = centered * factor;
+            this._contrastLUT[i] = Math.min(255, Math.max(0, adjusted + center));
+        }
+    }
+
+    // Combined filter application in a single pass
+    _applyAllFilters(imageData) {
+        const data = imageData.data;
+        
+        // Get active filters
+        const lightFilter = this.filters.get('light');
+        const hueSatFilter = this.filters.get('hueSaturation');
+        
+        if (!lightFilter?.active && !hueSatFilter?.active) return imageData;
+
+        // Apply light adjustments first
+        if (lightFilter?.active) {
+            lightFilter.apply(imageData);
+        }
+        
+        // Then apply color adjustments
+        if (hueSatFilter?.active) {
+            hueSatFilter.apply(imageData);
+        }
+        
+        return imageData;
     }
 
     // Add a method to invalidate cache when canvas dimensions change
     invalidateCache() {
-        // Only invalidate if the canvas size has actually changed
-        if (this.cache.lastCanvasSize.width !== this._tempCanvas.width ||
-            this.cache.lastCanvasSize.height !== this._tempCanvas.height) {
-            this.cache.imageData = null;
-            this.cache.width = 0;
-            this.cache.height = 0;
-            this.cache.needsUpdate = true;
-            this.cache.lastCanvasSize = {
-                width: this._tempCanvas.width,
-                height: this._tempCanvas.height
-            };
-        }
+        this.cache.imageData = null;
+        this.cache.width = 0;
+        this.cache.height = 0;
+        this.cache.needsUpdate = true;
     }
 
     // Register a new filter
     registerFilter(filter) {
+        if (!filter || typeof filter.apply !== 'function') {
+            throw new Error('Invalid filter: must implement apply method');
+        }
+        
         this.filters.set(filter.name, filter);
         this.cache.lastFilterStates.set(filter.name, {
             active: filter.active,
             properties: { ...filter.properties }
         });
+        this.invalidateCache();
+    }
+
+    // Update filter state
+    updateFilterState(filterName, active, properties) {
+        const filter = this.filters.get(filterName);
+        if (filter) {
+            filter.active = active;
+            if (properties) {
+                Object.assign(filter.properties, properties);
+            }
+            this.invalidateCache();
+        }
     }
 
     // Apply all active filters to the image data
@@ -57,15 +115,9 @@ export class FilterManager {
             // Draw the current content to the temporary canvas
             this._tempCtx.drawImage(canvas, x, y, width, height, 0, 0, width, height);
             
-            // Get the image data
+            // Get the image data and apply all filters in a single pass
             const imageData = this._tempCtx.getImageData(0, 0, width, height);
-            
-            // Apply all active filters
-            for (const [name, filter] of this.filters) {
-                if (filter.active) {
-                    filter.apply(imageData);
-                }
-            }
+            this._applyAllFilters(imageData);
             
             // Update the cache
             this.cache.imageData = imageData;
