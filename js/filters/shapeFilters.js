@@ -27,7 +27,7 @@ export class ShapeFilter extends BaseFilter {
         const canvas = document.createElement('canvas');
         canvas.width = imageData.width;
         canvas.height = imageData.height;
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
         
         // Put the image data onto the temporary canvas
         ctx.putImageData(imageData, 0, 0);
