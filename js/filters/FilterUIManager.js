@@ -3,6 +3,45 @@ export class FilterUIManager {
         this.filterManager = filterManager;
         this.controls = new Map();
         this.onFilterChange = null;
+        this._initFilterTabs();
+    }
+
+    _initFilterTabs() {
+        const filterTabs = document.querySelectorAll('#filtersPanel .tab-button');
+        const filterContents = document.querySelectorAll('#filtersPanel .tab-content');
+
+        filterTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Remove active class from all tabs and contents
+                filterTabs.forEach(t => t.classList.remove('active'));
+                filterContents.forEach(c => c.classList.add('hidden'));
+                
+                // Add active class to clicked tab and show corresponding content
+                tab.classList.add('active');
+                const contentId = tab.dataset.tab;
+                document.getElementById(contentId).classList.remove('hidden');
+            });
+        });
+        
+        // Ensure proper tab selection when filter panel is opened
+        document.querySelector('[data-panel="filtersPanel"]').addEventListener('click', () => {
+            // Check if any tab is already active, if not select the Light tab by default
+            const activeTab = document.querySelector('#filtersPanel .tab-button.active');
+            if (!activeTab) {
+                // Select the Light tab and its content
+                const lightTab = document.querySelector('#filtersPanel .tab-button[data-tab="lightTab"]');
+                const lightContent = document.getElementById('lightTab');
+                
+                if (lightTab && lightContent) {
+                    // Activate the Light tab and show its content
+                    filterTabs.forEach(t => t.classList.remove('active'));
+                    filterContents.forEach(c => c.classList.add('hidden'));
+                    
+                    lightTab.classList.add('active');
+                    lightContent.classList.remove('hidden');
+                }
+            }
+        });
     }
 
     // Initialize UI controls for a filter
