@@ -9,8 +9,10 @@ export class FilterManager {
             lastFilterStates: new Map()
         };
         this._debouncedDraw = null;
+        
+        // Create reusable temporary canvas and context
         this._tempCanvas = document.createElement('canvas');
-        this._tempCtx = this._tempCanvas.getContext('2d');
+        this._tempCtx = this._tempCanvas.getContext('2d', { willReadFrequently: true });
     }
 
     // Add a method to invalidate cache when canvas dimensions change
@@ -33,43 +35,41 @@ export class FilterManager {
     // Apply all active filters to the image data
     applyFilters(ctx, canvas, x, y, width, height) {
         // Check if we need to update the cache
-        if (!this.cache.needsUpdate && 
-            this.cache.width === width && 
-            this.cache.height === height && 
-            !this._haveFiltersChanged()) {
-            // Use cached result
-            ctx.putImageData(this.cache.imageData, x, y);
-            return;
-        }
-
-        // Set up temporary canvas
-        this._tempCanvas.width = width;
-        this._tempCanvas.height = height;
-        this._tempCtx.drawImage(canvas, x, y, width, height, 0, 0, width, height);
-
-        // Get image data once
-        const imageData = this._tempCtx.getImageData(0, 0, width, height);
-        let processedImageData = imageData;
-
-        // Apply each active filter in sequence
-        for (const filter of this.filters.values()) {
-            if (filter.active) {
-                processedImageData = filter.apply(processedImageData);
+        if (this.cache.needsUpdate || 
+            this.cache.width !== width || 
+            this.cache.height !== height) {
+            
+            // Resize temporary canvas if needed
+            if (this._tempCanvas.width !== width || this._tempCanvas.height !== height) {
+                this._tempCanvas.width = width;
+                this._tempCanvas.height = height;
             }
+            
+            // Draw the current content to the temporary canvas
+            this._tempCtx.drawImage(canvas, x, y, width, height, 0, 0, width, height);
+            
+            // Get the image data
+            const imageData = this._tempCtx.getImageData(0, 0, width, height);
+            
+            // Apply all active filters
+            for (const [name, filter] of this.filters) {
+                if (filter.active) {
+                    filter.apply(imageData);
+                }
+            }
+            
+            // Update the cache
+            this.cache.imageData = imageData;
+            this.cache.width = width;
+            this.cache.height = height;
+            this.cache.needsUpdate = false;
+            
+            // Draw the processed image data back to the canvas
+            ctx.putImageData(imageData, x, y);
+        } else {
+            // Use cached image data
+            ctx.putImageData(this.cache.imageData, x, y);
         }
-
-        // Put the processed image data back to the temporary canvas
-        this._tempCtx.putImageData(processedImageData, 0, 0);
-
-        // Draw the processed image to the target canvas
-        ctx.drawImage(this._tempCanvas, 0, 0, width, height, x, y, width, height);
-
-        // Update cache
-        this.cache.imageData = processedImageData;
-        this.cache.width = width;
-        this.cache.height = height;
-        this.cache.needsUpdate = false;
-        this._updateFilterStates();
     }
 
     // Check if any filters have changed

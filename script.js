@@ -37,6 +37,7 @@ import {
     drawGrid as drawGridUtil
 } from './js/utils/gridManager.js';
 import { initFilters, filterManager } from './js/filters/init.js';
+import { SliderInteractionManager } from './js/utils/SliderInteractionManager.js';
 
 let currentImage = null;
 let isDragging = false;
@@ -1477,5 +1478,25 @@ const canvasHeight = document.getElementById('canvasHeight');
 function updateGridSizeDisplay() {
     updateGridSizeDisplayUtil(unitSelect, config, gridSizeDisplay);
 }
+
+// Initialize slider interaction manager for all panels
+const panelManagers = {
+    filters: new SliderInteractionManager('#filtersPanel', {
+        fadeDuration: 200,
+        fadeOpacity: 0,
+        backgroundClass: 'bg-zinc-850',
+        borderClass: 'border-zinc-800'
+    }),
+    grid: new SliderInteractionManager('#gridPanel', {
+        fadeDuration: 200,
+        fadeOpacity: 0,
+        backgroundClass: 'bg-zinc-850'
+    }),
+    canvas: new SliderInteractionManager('#canvasPanel', {
+        fadeDuration: 200,
+        fadeOpacity: 0,
+        backgroundClass: 'bg-zinc-850'        
+    })
+};
 
 // ... rest of the code ... 
