@@ -9,10 +9,39 @@ export class LightFilter extends BaseFilter {
             highlights: 0,
             shadows: 0
         };
+        // Pre-allocate LUTs for better performance
+        this._contrastLUT = new Uint8Array(256);
+        this._lastContrastValue = null;
+    }
+
+    _updateContrastLUT(contrastValue) {
+        if (this._lastContrastValue === contrastValue) return;
+        this._lastContrastValue = contrastValue;
+
+        // If contrast is 0, create identity LUT
+        if (contrastValue === 0) {
+            for (let i = 0; i < 256; i++) {
+                this._contrastLUT[i] = i;
+            }
+            return;
+        }
+
+        const center = 128;
+        const factor = contrastValue > 0 
+            ? 1 + (contrastValue / 50) // Range: 1 to 3 for 0 to 100
+            : 1 / (1 + Math.abs(contrastValue) / 50); // Range: 1 to 0.33 for 0 to -100
+
+        // Calculate LUT in one pass
+        for (let i = 0; i < 256; i++) {
+            const centered = i - center;
+            const adjusted = centered * factor;
+            this._contrastLUT[i] = Math.min(255, Math.max(0, adjusted + center));
+        }
     }
 
     _process(imageData) {
         const data = imageData.data;
+        const len = data.length;
         
         // Quick check to avoid processing when no adjustments are needed
         if (this.properties.exposure === 0 && this.properties.contrast === 0 && 
@@ -20,91 +49,58 @@ export class LightFilter extends BaseFilter {
             return imageData;
         }
         
-        // Pre-calculate factors to avoid repeated calculations in the loop
-        const exposureFactor = 1 + (this.properties.exposure / 100);
+        // Pre-calculate factors
+        const exposureFactor = 1 + (this.properties.exposure * 0.01);
+        const contrastValue = this.properties.contrast;
+        const shadowFactor = 1 + (this.properties.shadows * 0.01);
+        const highlightFactor = 1 + (this.properties.highlights * 0.01);
         
-        // Remap contrast from slider range (-100 to +100) to effective range (-60 to +65)
-        const remappedContrast = this.properties.contrast > 0 
-            ? (this.properties.contrast / 100) * 65  // Positive values map to 0 to +65
-            : (this.properties.contrast / 100) * 60; // Negative values map to 0 to -60
-        
-        const contrastValue = remappedContrast;
-        const shadowFactor = 1 + (this.properties.shadows / 100);
-        const highlightFactor = 1 + (this.properties.highlights / 100);
+        // Update contrast LUT if needed
+        if (contrastValue !== 0) {
+            this._updateContrastLUT(contrastValue);
+        }
         
         // Use optimized version if only exposure is active
-        if (this.properties.contrast === 0 && this.properties.highlights === 0 && this.properties.shadows === 0) {
+        if (contrastValue === 0 && highlightFactor === 1 && shadowFactor === 1) {
             // Fast path for exposure-only adjustment
-            for (let i = 0; i < data.length; i += 4) {
-                data[i] = Math.min(255, Math.max(0, data[i] * exposureFactor));
-                data[i + 1] = Math.min(255, Math.max(0, data[i + 1] * exposureFactor));
-                data[i + 2] = Math.min(255, Math.max(0, data[i + 2] * exposureFactor));
+            for (let i = 0; i < len; i += 4) {
+                data[i] = (data[i] * exposureFactor + 0.5) | 0;
+                data[i + 1] = (data[i + 1] * exposureFactor + 0.5) | 0;
+                data[i + 2] = (data[i + 2] * exposureFactor + 0.5) | 0;
             }
             return imageData;
         }
         
-        // Full processing path
-        for (let i = 0; i < data.length; i += 4) {
-            // Store original values
-            const r = data[i];
-            const g = data[i + 1];
-            const b = data[i + 2];
+        // Full processing path with optimized integer math
+        for (let i = 0; i < len; i += 4) {
+            // Apply exposure first
+            let r = (data[i] * exposureFactor + 0.5) | 0;
+            let g = (data[i + 1] * exposureFactor + 0.5) | 0;
+            let b = (data[i + 2] * exposureFactor + 0.5) | 0;
             
-            // Calculate luminance for highlights/shadows
-            const luminance = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
-            
-            // Apply exposure (convert from percentage to factor)
-            let newR = Math.min(255, Math.max(0, r * exposureFactor));
-            let newG = Math.min(255, Math.max(0, g * exposureFactor));
-            let newB = Math.min(255, Math.max(0, b * exposureFactor));
-            
-            // Apply enhanced contrast with smoother steps
+            // Apply contrast using LUT
             if (contrastValue !== 0) {
-                // Use a progressive factor that increases more gradually
-                // For small values (0-20), apply minimal contrast
-                // For medium values (20-60), apply moderate contrast
-                // For high values (60-100), apply stronger contrast
-                
-                let factor;
-                const absContrast = Math.abs(contrastValue);
-                
-                if (absContrast <= 20) {
-                    // Very subtle contrast changes for small values
-                    factor = 1 + (contrastValue / 200); // Range: 0.9 to 1.1 for -20 to 20
-                } else if (absContrast <= 60) {
-                    // Medium contrast changes
-                    const baseChange = contrastValue > 0 ? 0.1 : -0.1;
-                    const additionalChange = (contrastValue / 100) * 0.8; // More gradual increase
-                    factor = 1 + baseChange + additionalChange;
-                } else {
-                    // Stronger contrast for high values
-                    factor = 1 + (contrastValue / 50); // Range: 0 to 3 for -100 to 100
-                }
-                
-                // Apply contrast with 128 as midpoint
-                newR = Math.min(255, Math.max(0, 128 + (newR - 128) * factor));
-                newG = Math.min(255, Math.max(0, 128 + (newG - 128) * factor));
-                newB = Math.min(255, Math.max(0, 128 + (newB - 128) * factor));
+                r = this._contrastLUT[r];
+                g = this._contrastLUT[g];
+                b = this._contrastLUT[b];
             }
             
-            // Calculate smooth blending weights for highlights and shadows
-            // Only calculate these if either highlights or shadows are active
+            // Apply highlights/shadows if needed
             if (highlightFactor !== 1 || shadowFactor !== 1) {
-                const shadowWeight = Math.pow(Math.max(0, 1 - luminance * 2), 1.5); // 1 → 0 as luminance goes from 0 → 0.5
-                const highlightWeight = Math.pow(Math.max(0, (luminance - 0.5) * 2), 1.5); // 0 → 1 as luminance goes from 0.5 → 1
-                
+                const luminance = (r * 0.299 + g * 0.587 + b * 0.114) * (1/255);
+                const shadowWeight = Math.pow(Math.max(0, 1 - luminance * 2), 1.5);
+                const highlightWeight = Math.pow(Math.max(0, (luminance - 0.5) * 2), 1.5);
                 const blendFactor = 1 + (shadowWeight * (shadowFactor - 1)) + (highlightWeight * (highlightFactor - 1));
                 
-                // Apply the blended adjustment
-                newR = Math.min(255, Math.max(0, newR * blendFactor));
-                newG = Math.min(255, Math.max(0, newG * blendFactor));
-                newB = Math.min(255, Math.max(0, newB * blendFactor));
+                r = (r * blendFactor + 0.5) | 0;
+                g = (g * blendFactor + 0.5) | 0;
+                b = (b * blendFactor + 0.5) | 0;
             }
             
-            // Update the pixel data
-            data[i] = newR;
-            data[i + 1] = newG;
-            data[i + 2] = newB;
+            // Update pixel data with bounds checking
+            data[i] = r < 0 ? 0 : r > 255 ? 255 : r;
+            data[i + 1] = g < 0 ? 0 : g > 255 ? 255 : g;
+            data[i + 2] = b < 0 ? 0 : b > 255 ? 255 : b;
         }
         
         return imageData;
