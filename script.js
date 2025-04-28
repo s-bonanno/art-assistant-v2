@@ -1508,4 +1508,27 @@ filterValueDisplays.forEach(display => {
     });
 });
 
+// Add event listeners for oritentation buttons
+landscapeBtn.addEventListener('click', () => {
+    const width = parseFloat(canvasWidthInput.value);
+    const height = parseFloat(canvasHeightInput.value);
+    if (height > width) {
+        canvasWidthInput.value = height;
+        canvasHeightInput.value = width;
+        updateOrientation();
+        updateCanvasSize(); // Assuming you have this to apply changes
+    }
+});
+
+portraitBtn.addEventListener('click', () => {
+    const width = parseFloat(canvasWidthInput.value);
+    const height = parseFloat(canvasHeightInput.value);
+    if (width > height) {
+        canvasWidthInput.value = height;
+        canvasHeightInput.value = width;
+        updateOrientation();
+        updateCanvasSize(); // Assuming you have this to apply changes
+    }
+});
+
 // ... rest of the code ... 
