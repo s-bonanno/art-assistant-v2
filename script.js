@@ -1317,7 +1317,7 @@ function drawCanvas() {
             ctx.translate(-currentImage.naturalWidth / 2, -currentImage.naturalHeight / 2);
 
             // Choose source image: original vs preview
-            const sourceImage = userZoom === 1 ? currentImage : previewImage;
+            const sourceImage = (userZoom === 1 && config.viewMode === 'full') ? currentImage : previewImage;
 
             // Create a temporary canvas for the image and filters
             const tempCanvas = document.createElement('canvas');
