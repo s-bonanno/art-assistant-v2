@@ -1494,4 +1494,3 @@ filterValueDisplays.forEach(display => {
     });
 });
 
-// ... rest of the code ... 
