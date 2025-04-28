@@ -29,6 +29,7 @@ import { convertToUnit, convertFromUnit } from './js/utils/unitConversion.js';
 import { gridConfig, updateColorSwatchSelection, setDefaultGridStyle, initGridStyleListeners, getCurrentGridType, updateGridPreview } from './js/utils/gridStyle.js';
 import { getZoom, setZoom, getPanX, setPanX, getPanY, setPanY, resetZoomAndPan, zoomTo100, initZoomPanListeners, calculateGridSizeLimits } from './js/utils/zoomPan.js';
 import { canvasSizePresets, initCanvasPresetSelector, resetPresetToCustom } from './js/utils/canvasPresets.js';
+import { OrientationManager } from './js/utils/orientation.js';
 import { 
     updateGridSizeDisplay as updateGridSizeDisplayUtil,
     updateGridSpacing as updateGridSpacingUtil,
@@ -43,6 +44,7 @@ let currentImage = null;
 let isDragging = false;
 let lastMouseX = 0;
 let lastMouseY = 0;
+let orientationManager = null;
 
 // Canvas configuration state
 let config = {
@@ -67,7 +69,7 @@ if (canvasWidthInput && canvasHeightInput) {
         drawCanvas();
         
         // Update orientation
-        updateOrientation();
+        orientationManager.updateOrientation();
     });
 }
 
@@ -76,6 +78,7 @@ if (canvasWidthInput) {
     canvasWidthInput.addEventListener('input', () => {
         resetPresetToCustom();
         document.getElementById('canvasSizePreset').value = 'custom';
+        orientationManager.updateOrientation();
     });
 }
 
@@ -83,6 +86,7 @@ if (canvasHeightInput) {
     canvasHeightInput.addEventListener('input', () => {
         resetPresetToCustom();
         document.getElementById('canvasSizePreset').value = 'custom';
+        orientationManager.updateOrientation();
     });
 }
 
@@ -518,16 +522,19 @@ canvasWidthInput.addEventListener('change', () => {
     const value = parseFloat(canvasWidthInput.value);
     config.canvasWidthCm = convertFromUnit(value, canvasUnitSelect.value);
     updateCanvasSize();
+    orientationManager.updateOrientation();
 });
 
 canvasHeightInput.addEventListener('change', () => {
     const value = parseFloat(canvasHeightInput.value);
     config.canvasHeightCm = convertFromUnit(value, canvasUnitSelect.value);
     updateCanvasSize();
+    orientationManager.updateOrientation();
 });
 
 canvasUnitSelect.addEventListener('change', () => {
     updateCanvasUnitDisplay();
+    orientationManager.updateOrientation();
 });
 
 unitSelect.addEventListener('change', () => {
@@ -1092,31 +1099,6 @@ filterInputs.forEach(input => {
     });
 });
 
-function updateOrientation() {
-    const landscapeBtn = document.getElementById('landscapeBtn');
-    const portraitBtn = document.getElementById('portraitBtn');
-    const width = parseFloat(canvasWidthInput.value);
-    const height = parseFloat(canvasHeightInput.value);
-    
-    if (width === height) {
-        // Square canvas - disable both buttons
-        landscapeBtn.disabled = true;
-        portraitBtn.disabled = true;
-        landscapeBtn.setAttribute('data-active', 'false');
-        portraitBtn.setAttribute('data-active', 'false');
-    } else {
-        // Enable buttons
-        landscapeBtn.disabled = false;
-        portraitBtn.disabled = false;
-        
-        // Set active state based on orientation
-        const isLandscape = width > height;
-        landscapeBtn.setAttribute('data-active', isLandscape);
-        portraitBtn.setAttribute('data-active', !isLandscape);
-    }
-}
-
-// Update grid controls visibility based on type
 function updateGridControlsVisibility(gridType) {
     updateGridControlsVisibilityUtil(gridType);
 }
@@ -1294,6 +1276,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // Draw initial canvas
         drawCanvas();
+        
+        // Initialize orientation manager
+        orientationManager = new OrientationManager(config, updateCanvasSize, drawCanvas);
+        orientationManager.init();
     } catch (error) {
         console.error('Initialization error:', error);
     }
