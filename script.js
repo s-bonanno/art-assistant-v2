@@ -1,3 +1,19 @@
+import { convertToUnit, convertFromUnit } from './js/utils/unitConversion.js';
+import { gridConfig, updateColorSwatchSelection, setDefaultGridStyle, initGridStyleListeners, getCurrentGridType, updateGridPreview } from './js/utils/gridStyle.js';
+import { getZoom, setZoom, getPanX, setPanX, getPanY, setPanY, resetZoomAndPan, zoomTo100, initZoomPanListeners, calculateGridSizeLimits } from './js/utils/zoomPan.js';
+import { canvasSizePresets, initCanvasPresetSelector, resetPresetToCustom } from './js/utils/canvasPresets.js';
+import { OrientationManager } from './js/utils/orientation.js';
+import { exportCanvas } from './js/utils/exportCanvas.js';
+import { 
+    updateGridSizeDisplay as updateGridSizeDisplayUtil,
+    updateGridSpacing as updateGridSpacingUtil,
+    updateGridSliderUI as updateGridSliderUIUtil,
+    updateGridControlsVisibility as updateGridControlsVisibilityUtil,
+    drawGrid as drawGridUtil
+} from './js/utils/gridManager.js';
+import { initFilters, filterManager } from './js/filters/init.js';
+import { SliderInteractionManager } from './js/utils/SliderInteractionManager.js';
+
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const imageInput = document.getElementById('imageInput');
@@ -25,21 +41,6 @@ const gridSquareSizeInput = document.getElementById('gridSquareSize');
 const MAX_CANVAS_DIMENSION = 1000; // Maximum canvas dimension in pixels
 const EXPORT_SIZE = 2400; // Size of the exported image
 const CM_PER_INCH = 2.54; // Conversion factor for inches to centimeters
-import { convertToUnit, convertFromUnit } from './js/utils/unitConversion.js';
-import { gridConfig, updateColorSwatchSelection, setDefaultGridStyle, initGridStyleListeners, getCurrentGridType, updateGridPreview } from './js/utils/gridStyle.js';
-import { getZoom, setZoom, getPanX, setPanX, getPanY, setPanY, resetZoomAndPan, zoomTo100, initZoomPanListeners, calculateGridSizeLimits } from './js/utils/zoomPan.js';
-import { canvasSizePresets, initCanvasPresetSelector, resetPresetToCustom } from './js/utils/canvasPresets.js';
-import { OrientationManager } from './js/utils/orientation.js';
-import { 
-    updateGridSizeDisplay as updateGridSizeDisplayUtil,
-    updateGridSpacing as updateGridSpacingUtil,
-    updateGridSliderUI as updateGridSliderUIUtil,
-    updateGridControlsVisibility as updateGridControlsVisibilityUtil,
-    drawGrid as drawGridUtil
-} from './js/utils/gridManager.js';
-import { initFilters, filterManager } from './js/filters/init.js';
-import { SliderInteractionManager } from './js/utils/SliderInteractionManager.js';
-import { exportCanvas as exportCanvasUtil } from './js/utils/exportCanvas.js';
 
 let currentImage = null;
 let isDragging = false;
@@ -708,54 +709,147 @@ exportBtn.addEventListener('click', () => {
     }
     
     // Create high-resolution canvas
-    const exportCanvas = document.createElement('canvas');
-    const exportCtx = exportCanvas.getContext('2d');
+    const exportCanvasElement = document.createElement('canvas');
+    const exportCtx = exportCanvasElement.getContext('2d');
     
     if (config.viewMode === 'full') {
         // In full image mode, use the original image dimensions
-        exportCanvas.width = currentImage.naturalWidth;
-        exportCanvas.height = currentImage.naturalHeight;
+        exportCanvasElement.width = currentImage.naturalWidth;
+        exportCanvasElement.height = currentImage.naturalHeight;
         
         // Clear export canvas with dark background
         exportCtx.fillStyle = '#2c2c2e';
-        exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+        exportCtx.fillRect(0, 0, exportCanvasElement.width, exportCanvasElement.height);
         
-        // Draw the full image
-        exportCtx.drawImage(currentImage, 0, 0);
-        
-        // Draw grid if enabled
-        if (gridConfig.type !== 'none') {
-            drawGrid(exportCtx, exportCanvas.width, exportCanvas.height);
+        // Create a temporary canvas for the image and filters
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCanvas.width = currentImage.naturalWidth;
+        tempCanvas.height = currentImage.naturalHeight;
+
+        // Draw the full image to temp canvas
+        tempCtx.drawImage(currentImage, 0, 0);
+
+        // Apply filters if any are active
+        if (filterManager.areFiltersActive()) {
+            filterManager.applyFilters(tempCtx, tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
         }
+
+        // Draw the filtered image to export canvas
+        exportCtx.drawImage(tempCanvas, 0, 0);
+        
+        // Draw grid using current grid type
+        const gridType = getCurrentGridType();
+        if (gridType) {
+            exportCtx.save();
+            
+            // Set up grid styling
+            exportCtx.strokeStyle = gridConfig.color;
+            exportCtx.globalAlpha = gridConfig.opacity;
+            exportCtx.lineWidth = gridConfig.lineWeight;
+            
+            // Draw grid using the current grid type
+            const dimensions = {
+                width: exportCanvasElement.width,
+                height: exportCanvasElement.height,
+                gridSpacing: config.gridSpacing
+            };
+            gridType.draw(exportCtx, gridConfig, dimensions);
+            
+            exportCtx.restore();
+        }
+        
+        exportCtx.globalAlpha = 1; // Reset opacity
     } else {
-        // Canvas mode - use configured dimensions
-        exportCanvas.width = config.canvasWidth;
-        exportCanvas.height = config.canvasHeight;
+        // Canvas mode - existing export logic
+        exportCanvasElement.width = EXPORT_SIZE;
+        exportCanvasElement.height = Math.round(EXPORT_SIZE * (config.canvasHeight / config.canvasWidth));
+        
+        // Calculate scale factor between preview and export
+        const scaleFactor = EXPORT_SIZE / config.canvasWidth;
         
         // Clear export canvas with dark background
         exportCtx.fillStyle = '#2c2c2e';
-        exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+        exportCtx.fillRect(0, 0, exportCanvasElement.width, exportCanvasElement.height);
         
-        // Draw the image at the correct position and scale
+        // Draw image at high resolution
         const scale = Math.min(
             config.canvasWidth / currentImage.width,
             config.canvasHeight / currentImage.height
         );
-        const width = currentImage.width * scale;
-        const height = currentImage.height * scale;
-        const x = (config.canvasWidth - width) / 2;
-        const y = (config.canvasHeight - height) / 2;
         
-        exportCtx.drawImage(currentImage, x, y, width, height);
+        const baseWidth = currentImage.width * scale;
+        const baseHeight = currentImage.height * scale;
+        const centerX = (config.canvasWidth - baseWidth) / 2;
+        const centerY = (config.canvasHeight - baseHeight) / 2;
         
-        // Draw grid if enabled
-        if (gridConfig.type !== 'none') {
-            drawGrid(exportCtx, exportCanvas.width, exportCanvas.height);
+        // Scale up the image dimensions and position
+        const finalWidth = baseWidth * getZoom() * scaleFactor;
+        const finalHeight = baseHeight * getZoom() * scaleFactor;
+        const x = (centerX + getPanX()) * scaleFactor;
+        const y = (centerY + getPanY()) * scaleFactor;
+        
+        // Always use the original high-resolution image for export, regardless of zoom level
+        const sourceImage = currentImage;
+        
+        // Create a temporary canvas for the image and filters
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        
+        // Calculate scale to maintain original image's aspect ratio
+        const outputScale = Math.min(
+            finalWidth / sourceImage.width,
+            finalHeight / sourceImage.height
+        );
+        const scaledWidth = sourceImage.width * outputScale;
+        const scaledHeight = sourceImage.height * outputScale;
+        
+        tempCanvas.width = scaledWidth;
+        tempCanvas.height = scaledHeight;
+        
+        // Enable high quality image scaling
+        tempCtx.imageSmoothingEnabled = true;
+        tempCtx.imageSmoothingQuality = 'high';
+        
+        tempCtx.drawImage(sourceImage, 0, 0, scaledWidth, scaledHeight);
+        
+        // Apply filters if any are active
+        if (filterManager.areFiltersActive()) {
+            filterManager.applyFilters(tempCtx, tempCanvas, 0, 0, scaledWidth, scaledHeight);
         }
+
+        // Draw the filtered image to export canvas
+        exportCtx.drawImage(tempCanvas, x, y);
+        
+        // Draw grid using current grid type
+        const gridType = getCurrentGridType();
+        if (gridType) {
+            exportCtx.save();
+            
+            // Set up grid styling
+            exportCtx.strokeStyle = gridConfig.color;
+            exportCtx.globalAlpha = gridConfig.opacity;
+            exportCtx.lineWidth = gridConfig.lineWeight;
+            
+            // Draw grid using the current grid type
+            const dimensions = {
+                width: exportCanvasElement.width,
+                height: exportCanvasElement.height,
+                gridSpacing: config.gridSpacing * scaleFactor
+            };
+            gridType.draw(exportCtx, gridConfig, dimensions);
+            
+            exportCtx.restore();
+        }
+        
+        exportCtx.globalAlpha = 1; // Reset opacity
     }
     
-    // Trigger the export
-    window.exportCanvas(exportCanvas);
+    // Use the imported exportCanvas function to handle the export
+    exportCanvas(exportCanvasElement).catch(error => {
+        console.error('Export failed:', error);
+        alert('Failed to export image. Please try again.');
+    });
 });
 
 // Add these variables near the top where other state variables are defined
