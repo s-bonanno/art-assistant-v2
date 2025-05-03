@@ -9,7 +9,9 @@ import {
     updateGridSpacing as updateGridSpacingUtil,
     updateGridSliderUI as updateGridSliderUIUtil,
     updateGridControlsVisibility as updateGridControlsVisibilityUtil,
-    drawGrid as drawGridUtil
+    drawGrid as drawGridUtil,
+    setDefaultGridSize,
+    updateGridSizeLimits
 } from './js/utils/gridManager.js';
 import { initFilters, filterManager } from './js/filters/init.js';
 import { SliderInteractionManager } from './js/utils/SliderInteractionManager.js';
@@ -210,7 +212,7 @@ function resizeCanvasToFit() {
         updateGridSpacing();
 
         // Update grid size limits after resizing
-        updateGridSizeLimits();
+        updateGridSizeLimits(config, gridSizeSlider, gridSquareSizeInput, currentImage);
 
         // Return true if canvas was resized
         return true;
@@ -228,8 +230,8 @@ function updateCanvasSize() {
     resizeCanvasToFit();
     
     // Update grid size and limits after canvas size change
-    setDefaultGridSize();
-    updateGridSizeLimits();
+    setDefaultGridSize(config, currentImage, unitSelect, gridSquareSizeInput, gridSizeSlider, gridSizeValue);
+    updateGridSizeLimits(config, gridSizeSlider, gridSquareSizeInput);
 }
 
 // Add window resize handler with debounce
@@ -240,71 +242,6 @@ window.addEventListener('resize', () => {
         resizeCanvasToFit();
     }, 100);
 });
-
-function setDefaultGridSize() {
-    if (currentImage) {
-        if (config.viewMode === 'full') {
-            // Full image mode - use image dimensions in pixels
-            const longestSide = Math.max(currentImage.naturalWidth, currentImage.naturalHeight);
-            const defaultGridSize = Math.round(longestSide / 5);
-            
-            // Update config and UI
-            config.gridSpacing = defaultGridSize;
-            gridSquareSizeInput.value = defaultGridSize;
-            gridSizeSlider.value = defaultGridSize;
-            gridSizeValue.textContent = `${defaultGridSize} px`;
-            
-            // Set unit to px in full image mode and disable selector
-            unitSelect.value = 'px';
-            unitSelect.disabled = true;
-            
-            // Update unit options for full image mode
-            const pxOption = document.createElement('option');
-            pxOption.value = 'px';
-            pxOption.textContent = 'px';
-            unitSelect.innerHTML = '';
-            unitSelect.appendChild(pxOption);
-            
-            console.log("Set full image grid size to:", defaultGridSize, "px");
-        } else {
-            // Canvas mode - use canvas dimensions in cm
-            const longestSideCm = Math.max(config.canvasWidthCm, config.canvasHeightCm);
-            const defaultGridSizeCm = longestSideCm / 5;
-            
-            // Update config and UI
-            config.gridSizeCm = defaultGridSizeCm;
-            gridSquareSizeInput.value = defaultGridSizeCm.toFixed(1);
-            gridSizeSlider.value = defaultGridSizeCm;
-            
-            // Enable unit selector and update options for canvas mode
-            unitSelect.disabled = false;
-            unitSelect.innerHTML = `
-                <option value="cm">cm</option>
-                <option value="in">in</option>
-            `;
-            
-            // Set default unit to cm if not already set
-            if (unitSelect.value !== 'cm' && unitSelect.value !== 'in') {
-                unitSelect.value = 'cm';
-            }
-            
-            const unit = unitSelect.value;
-            const displayValue = unit === 'in' ? 
-                (defaultGridSizeCm / CM_PER_INCH).toFixed(2) : 
-                defaultGridSizeCm.toFixed(1);
-            gridSizeValue.textContent = `${displayValue} ${unit}`;
-            
-            // Calculate pixels per cm for grid spacing
-            const pixelsPerCm = config.canvasWidth / config.canvasWidthCm;
-            config.gridSpacing = defaultGridSizeCm * pixelsPerCm;
-            
-            console.log("Set canvas grid size to:", defaultGridSizeCm, "cm");
-        }
-        
-        // Update grid size limits for the current mode
-        updateGridSizeLimits();
-    }
-}
 
 // Initialize grid style listeners
 initGridStyleListeners(drawCanvas);
@@ -343,66 +280,6 @@ function fitToCanvas() {
     // Redraw canvas
 
     console.log("Fit to canvas 2");
-}
-
-// Update grid size limits
-function updateGridSizeLimits() {
-    let width, height;
-    
-    if (config.viewMode === 'full' && currentImage) {
-        width = currentImage.naturalWidth;
-        height = currentImage.naturalHeight;
-    } else {
-        width = config.canvasWidth;
-        height = config.canvasHeight;
-    }
-    
-    const gridSizeLimits = calculateGridSizeLimits(
-        width,
-        height,
-        config.viewMode,
-        config
-    );
-    
-    // Update slider and input settings
-    gridSizeSlider.min = gridSizeLimits.min;
-    gridSizeSlider.max = gridSizeLimits.max;
-    gridSizeSlider.step = config.viewMode === 'full' ? '1' : '0.1';
-    
-    // If current grid size is outside new limits, adjust it
-    if (config.viewMode === 'full') {
-        if (config.gridSpacing < gridSizeLimits.min) {
-            config.gridSpacing = gridSizeLimits.min;
-        } else if (config.gridSpacing > gridSizeLimits.max) {
-            config.gridSpacing = gridSizeLimits.max;
-        }
-        gridSizeSlider.value = config.gridSpacing;
-        gridSizeValue.textContent = `${config.gridSpacing} px`;
-    } else {
-        const currentSizeCm = config.gridSizeCm;
-        if (currentSizeCm < parseFloat(gridSizeLimits.min)) {
-            config.gridSizeCm = parseFloat(gridSizeLimits.min);
-        } else if (currentSizeCm > parseFloat(gridSizeLimits.max)) {
-            config.gridSizeCm = parseFloat(gridSizeLimits.max);
-        }
-        
-        // Update slider value
-        gridSizeSlider.value = config.gridSizeCm;
-        
-        // Update display value based on selected unit
-        const unit = unitSelect.value;
-        const displayValue = unit === 'in' ? 
-            (config.gridSizeCm / CM_PER_INCH).toFixed(2) : 
-            config.gridSizeCm.toFixed(1);
-        gridSizeValue.textContent = `${displayValue} ${unit}`;
-        
-        // Update input field value
-        gridSquareSizeInput.value = displayValue;
-        
-        // Recalculate grid spacing with current dimensions
-        const pixelsPerCm = config.canvasWidth / config.canvasWidthCm;
-        config.gridSpacing = config.gridSizeCm * pixelsPerCm;
-    }
 }
 
 // Add fit to screen functionality
@@ -491,11 +368,11 @@ imageInput.addEventListener('change', (e) => {
                 config.imageOffsetYPercent = 0;
                 filterManager.cache.needsUpdate = true;
                 
-                // Set default grid size based on image dimensions
-                setDefaultGridSize();
+                // Use imported setDefaultGridSize with all required parameters
+                setDefaultGridSize(config, img, unitSelect, gridSquareSizeInput, gridSizeSlider, gridSizeValue);
                 
                 // Update grid size limits
-                updateGridSizeLimits();
+                updateGridSizeLimits(config, gridSizeSlider, gridSquareSizeInput);
                 
                 // Resize and fit to screen
                 resizeCanvasToFit();
@@ -1008,15 +885,17 @@ function updateViewMode(showAll) {
         // Store current grid type before updating
         const currentGridType = gridConfig.type;
         
-        // Always set default grid size when switching modes to ensure
-        // it's 1/5 of the longest side
-        setDefaultGridSize();
-        
-        // Restore the previous grid type
-        gridConfig.type = currentGridType;
-        
         // Try to restore previous state for this mode
         const targetState = showAll ? fullModeState : canvasModeState;
+        
+        // If switching to full mode, fit the image to screen first
+        if (showAll) {
+            // Temporarily set view mode to full to allow fitToScreen to work
+            const originalViewMode = config.viewMode;
+            config.viewMode = 'full';
+            fitToScreen();
+            config.viewMode = originalViewMode;
+        }
         
         // Restore zoom and pan state when switching to canvas mode
         if (!showAll && targetState) {
@@ -1069,6 +948,14 @@ function updateViewMode(showAll) {
         
         // Update grid controls UI
         updateGridControlsVisibility(gridConfig.type);
+        
+        // If switching to full mode, always set default grid size to 1/5th of longest side
+        if (showAll) {
+            setDefaultGridSize(config, currentImage, unitSelect, gridSquareSizeInput, gridSizeSlider, gridSizeValue);
+        }
+        
+        // Restore the previous grid type
+        gridConfig.type = currentGridType;
         
         // If switching to full mode, fit the image to screen
         if (showAll) {
@@ -1319,7 +1206,7 @@ function drawCanvas() {
             ctx.translate(-currentImage.naturalWidth / 2, -currentImage.naturalHeight / 2);
 
             // Choose source image: original vs preview based on zoom level
-            const sourceImage = previewImage || currentImage;
+            const sourceImage = (userZoom === 1) ? currentImage : (previewImage || currentImage);
 
             // Create a temporary canvas for the image and filters
             const tempCanvas = document.createElement('canvas');
@@ -1396,8 +1283,7 @@ function drawCanvas() {
             const x = centerX + getPanX();
             const y = centerY + getPanY();
             
-            // Choose source image: original vs preview based on zoom level
-            const userZoom = getZoom();
+            // In canvas mode, always use preview image for better performance
             const sourceImage = previewImage || currentImage;
             
             // Create a temporary canvas for the image and filters
@@ -1454,11 +1340,6 @@ const showAllBtn = document.getElementById('showAllBtn');
 const cropToCanvasBtn = document.getElementById('cropToCanvasBtn');
 const canvasWidth = document.getElementById('canvasWidth');
 const canvasHeight = document.getElementById('canvasHeight');
-
-// Update the function to use the renamed import
-function updateGridSizeDisplay() {
-    updateGridSizeDisplayUtil(unitSelect, config, gridSizeDisplay);
-}
 
 // Initialize slider interaction manager for all panels
 const panelManagers = {

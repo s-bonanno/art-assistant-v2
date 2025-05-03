@@ -92,6 +92,105 @@ export function updateGridControlsVisibility(gridType) {
     });
 }
 
+export function setDefaultGridSize(config, currentImage, unitSelect, gridSquareSizeInput, gridSizeSlider, gridSizeValue) {
+    if (currentImage) {
+        if (config.viewMode === 'full') {
+            // Full image mode - use image dimensions in pixels
+            const longestSide = Math.max(currentImage.naturalWidth, currentImage.naturalHeight);
+            const defaultGridSize = Math.round(longestSide / 5);
+            
+            // Update config and UI
+            config.gridSpacing = defaultGridSize;
+            if (gridSquareSizeInput) gridSquareSizeInput.value = defaultGridSize;
+            if (gridSizeSlider) gridSizeSlider.value = defaultGridSize;
+            if (gridSizeValue) gridSizeValue.textContent = `${defaultGridSize} px`;
+            
+            // Set unit to px in full image mode and disable selector
+            if (unitSelect) {
+                unitSelect.value = 'px';
+                unitSelect.disabled = true;
+                
+                // Update unit options for full image mode
+                const pxOption = document.createElement('option');
+                pxOption.value = 'px';
+                pxOption.textContent = 'px';
+                unitSelect.innerHTML = '';
+                unitSelect.appendChild(pxOption);
+            }
+        } else {
+            // Canvas mode - use configured dimensions
+            const defaultGridSize = Math.max(config.canvasWidthCm, config.canvasHeightCm) / 5;
+            
+            // Update config and UI
+            config.gridSizeCm = defaultGridSize;
+            if (gridSquareSizeInput) gridSquareSizeInput.value = defaultGridSize.toFixed(1);
+            if (gridSizeSlider) gridSizeSlider.value = defaultGridSize;
+            
+            // Enable unit selector and update options for canvas mode
+            if (unitSelect) {
+                unitSelect.disabled = false;
+                unitSelect.innerHTML = `
+                    <option value="cm">cm</option>
+                    <option value="in">in</option>
+                `;
+                
+                // Set default unit to cm if not already set
+                if (unitSelect.value !== 'cm' && unitSelect.value !== 'in') {
+                    unitSelect.value = 'cm';
+                }
+                
+                const unit = unitSelect.value;
+                const displayValue = unit === 'in' ? 
+                    (defaultGridSize / CM_PER_INCH).toFixed(2) : 
+                    defaultGridSize.toFixed(1);
+                if (gridSizeValue) gridSizeValue.textContent = `${displayValue} ${unit}`;
+            }
+            
+            // Calculate pixels per cm for grid spacing
+            const pixelsPerCm = config.canvasWidth / config.canvasWidthCm;
+            config.gridSpacing = defaultGridSize * pixelsPerCm;
+        }
+    }
+}
+
+export function updateGridSizeLimits(config, gridSizeSlider, gridSquareSizeInput, currentImage) {
+    if (config.viewMode === 'full') {
+        // Full image mode - use pixels
+        if (currentImage) {
+            const maxSize = Math.max(currentImage.naturalWidth, currentImage.naturalHeight);
+            const minSize = 10; // Minimum 10 pixels
+            
+            if (gridSizeSlider) {
+                gridSizeSlider.min = minSize;
+                gridSizeSlider.max = maxSize;
+                gridSizeSlider.step = 1;
+            }
+            
+            if (gridSquareSizeInput) {
+                gridSquareSizeInput.min = minSize;
+                gridSquareSizeInput.max = maxSize;
+                gridSquareSizeInput.step = 1;
+            }
+        }
+    } else {
+        // Canvas mode - use centimeters
+        const maxSize = Math.max(config.canvasWidthCm, config.canvasHeightCm);
+        const minSize = 1; // Minimum 1 cm
+        
+        if (gridSizeSlider) {
+            gridSizeSlider.min = minSize;
+            gridSizeSlider.max = maxSize;
+            gridSizeSlider.step = 0.1;
+        }
+        
+        if (gridSquareSizeInput) {
+            gridSquareSizeInput.min = minSize;
+            gridSquareSizeInput.max = maxSize;
+            gridSquareSizeInput.step = 0.1;
+        }
+    }
+}
+
 export function drawGrid(ctx, config, gridConfig, canvas) {
     if (!config.showGrid) return;
 
@@ -112,7 +211,7 @@ export function drawGrid(ctx, config, gridConfig, canvas) {
     gridType.draw(ctx, gridConfig, {
         width: canvas.width,
         height: canvas.height,
-        gridSpacing: gridConfig.spacing
+        gridSpacing: config.gridSpacing
     });
 
     ctx.restore();
