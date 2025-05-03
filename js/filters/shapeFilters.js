@@ -11,7 +11,7 @@ export class ShapeFilter extends BaseFilter {
         this.properties = {
             filterType: 'blockIn', // 'notan' or 'blockIn', default is now blockIn
             notanBands: 0,
-            blockBandDepth: 0, // Default to 0 (off)
+            blockBandDepth: 1, // Default to 1 (off)
             totalBands: 6, // This now applies to both filter types
             shapeOpacity: 100
         };
@@ -50,8 +50,8 @@ export class ShapeFilter extends BaseFilter {
             // Get the modified image data
             modifiedImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         } else if (this.properties.filterType === 'blockIn') {
-            // If blockBandDepth is 0, effectively turn off the filter by returning original image
-            if (this.properties.blockBandDepth === 0) {
+            // If blockBandDepth is 0 or 1, effectively turn off the filter by returning original image
+            if (this.properties.blockBandDepth <= 1) {
                 return imageData;
             }
             
@@ -79,7 +79,7 @@ export class ShapeFilter extends BaseFilter {
         this.active = false;
         this.properties.filterType = 'blockIn';
         this.properties.notanBands = 0;
-        this.properties.blockBandDepth = 0;
+        this.properties.blockBandDepth = 1;
         this.properties.totalBands = 6;
         this.properties.shapeOpacity = 100;
         this.originalImageData = null;
@@ -150,9 +150,14 @@ function applyShapeToneFilter(imageData, bandDepth = 1, totalBands = 6) {
     bandMap.push(band);
   }
 
+  // For slider value 0 or 1, filter is off (handled in _process)
+  // For value 2, show 1 level (black and white)
+  // For value 3+, show (value-1) levels
+  const effectiveBandDepth = bandDepth - 1;
+  
   // Determine which bands to show based on current depth
   // Show from dark to light (lowest bands first)
-  const maxBand = Math.min(totalBands - 1, bandDepth - 1);
+  const maxBand = Math.min(totalBands - 1, effectiveBandDepth - 1);
 
   for (let i = 0, p = 0; i < bandMap.length; i++, p += 4) {
     const band = bandMap[i];

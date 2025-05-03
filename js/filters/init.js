@@ -42,7 +42,7 @@ export function initFilters(drawCanvas) {
     // Initialize UI controls for shape filter
     filterUIManager.initFilterControls('shape', [
         { id: 'notanBands', min: 0, max: 8, step: 1 },
-        { id: 'blockBandDepth', min: 0, max: 6, step: 1 },
+        { id: 'blockBandDepth', min: 1, max: 6, step: 1 },
         { id: 'totalBands', min: 2, max: 12, step: 1 },
         { id: 'shapeOpacity', min: 0, max: 100, step: 1 }
     ]);

@@ -104,9 +104,14 @@ export class FilterUIManager {
                         if (element && valueDisplay) {
                             const resetValue = valueDisplay.dataset.resetValue || "0";
                             element.value = resetValue;
-                            valueDisplay.textContent = resetValue;
-                            if (element.id === 'shapeOpacity' && resetValue !== "0") {
+                            
+                            // Display "All colours" when blockBandDepth is set to 1
+                            if (element.id === 'blockBandDepth' && resetValue === "1") {
+                                valueDisplay.textContent = "All colours";
+                            } else if (element.id === 'shapeOpacity' && resetValue !== "0") {
                                 valueDisplay.textContent = `${resetValue}%`;
+                            } else {
+                                valueDisplay.textContent = resetValue;
                             }
                         }
                     });
@@ -139,11 +144,14 @@ export class FilterUIManager {
             if (slider && valueDisplay) {
                 // Set initial values
                 slider.value = filter.getProperty(id);
-                valueDisplay.textContent = filter.getProperty(id);
                 
-                // Add % to opacity display
-                if (id === 'shapeOpacity') {
+                // Special display for blockBandDepth value 1
+                if (id === 'blockBandDepth' && filter.getProperty(id) === 1) {
+                    valueDisplay.textContent = "All colours";
+                } else if (id === 'shapeOpacity') {
                     valueDisplay.textContent = `${filter.getProperty(id)}%`;
+                } else {
+                    valueDisplay.textContent = filter.getProperty(id);
                 }
 
                 // Set min, max, and step attributes
@@ -161,13 +169,18 @@ export class FilterUIManager {
                         }
                     }
 
-                    filter.setProperty(id, parseInt(e.target.value));
+                    // For blockBandDepth values 0 and 1, both should turn off the filter
+                    let value = parseInt(e.target.value);
+                    
+                    filter.setProperty(id, value);
                     
                     // Update display value
-                    if (id === 'shapeOpacity') {
+                    if (id === 'blockBandDepth' && value === 1) {
+                        valueDisplay.textContent = "All colours";
+                    } else if (id === 'shapeOpacity') {
                         valueDisplay.textContent = `${e.target.value}%`;
                     } else {
-                        valueDisplay.textContent = e.target.value;
+                        valueDisplay.textContent = value;
                     }
                     
                     this.filterManager.cache.needsUpdate = true;
@@ -191,17 +204,9 @@ export class FilterUIManager {
                 const value = parseInt(e.target.value);
                 filter.setProperty('totalBands', value);
                 
-                // Update max for blockBandDepth slider
-                const blockBandDepthSlider = document.getElementById('blockBandDepth');
-                if (blockBandDepthSlider) {
-                    blockBandDepthSlider.max = value;
-                }
-                
-                // Update max for notanBands slider
-                const notanBandsSlider = document.getElementById('notanBands');
-                if (notanBandsSlider) {
-                    notanBandsSlider.max = value;
-                }
+                // Force refresh of sliders by replacing them
+                this._refreshBlockBandDepthSlider(filter, value);
+                this._refreshNotanBandsSlider(filter, value);
                 
                 // Auto-activate the filter if it's inactive
                 if (!filter.active) {
@@ -217,6 +222,129 @@ export class FilterUIManager {
                     this.onFilterChange();
                 }
             });
+        }
+    }
+    
+    _refreshBlockBandDepthSlider(filter, maxValue) {
+        const sliderContainer = document.getElementById('blockInControls');
+        if (!sliderContainer) return;
+        
+        // Get the current slider and value display
+        const oldSlider = document.getElementById('blockBandDepth');
+        const oldValueDisplay = document.getElementById('blockBandDepthValue');
+        
+        if (!oldSlider || !oldValueDisplay) return;
+        
+        // Get current value and ensure it doesn't exceed the new max
+        let currentValue = parseInt(oldSlider.value);
+        if (currentValue > maxValue) {
+            currentValue = maxValue;
+            filter.setProperty('blockBandDepth', currentValue);
+        }
+        
+        // Create a new slider with the updated max value
+        const newSlider = document.createElement('input');
+        newSlider.type = 'range';
+        newSlider.id = 'blockBandDepth';
+        newSlider.min = '1';
+        newSlider.max = maxValue.toString();
+        newSlider.step = '1';
+        newSlider.value = currentValue.toString();
+        newSlider.className = 'w-full';
+        
+        // Clone the event listeners
+        newSlider.addEventListener('input', (e) => {
+            let value = parseInt(e.target.value);
+            filter.setProperty('blockBandDepth', value);
+            
+            if (value === 1) {
+                oldValueDisplay.textContent = "All colours";
+            } else {
+                oldValueDisplay.textContent = value;
+            }
+            
+            this.filterManager.cache.needsUpdate = true;
+            if (this.onFilterChange) {
+                this.onFilterChange();
+            }
+        });
+        
+        // Update display value
+        if (currentValue === 1) {
+            oldValueDisplay.textContent = "All colours";
+        } else {
+            oldValueDisplay.textContent = currentValue;
+        }
+        
+        // Replace the old slider with the new one
+        oldSlider.parentNode.replaceChild(newSlider, oldSlider);
+        
+        // Update the control references in the map
+        const controls = this.controls.get('shape');
+        if (controls && controls.sliders) {
+            for (let i = 0; i < controls.sliders.length; i++) {
+                if (controls.sliders[i].element && controls.sliders[i].element.id === 'blockBandDepth') {
+                    controls.sliders[i].element = newSlider;
+                    break;
+                }
+            }
+        }
+    }
+    
+    _refreshNotanBandsSlider(filter, maxValue) {
+        const sliderContainer = document.getElementById('notanControls');
+        if (!sliderContainer) return;
+        
+        // Get the current slider and value display
+        const oldSlider = document.getElementById('notanBands');
+        const oldValueDisplay = document.getElementById('notanBandsValue');
+        
+        if (!oldSlider || !oldValueDisplay) return;
+        
+        // Get current value and ensure it doesn't exceed the new max
+        let currentValue = parseInt(oldSlider.value);
+        if (currentValue > maxValue) {
+            currentValue = maxValue;
+            filter.setProperty('notanBands', currentValue);
+        }
+        
+        // Create a new slider with the updated max value
+        const newSlider = document.createElement('input');
+        newSlider.type = 'range';
+        newSlider.id = 'notanBands';
+        newSlider.min = '0';
+        newSlider.max = maxValue.toString();
+        newSlider.step = '1';
+        newSlider.value = currentValue.toString();
+        newSlider.className = 'w-full';
+        
+        // Clone the event listeners
+        newSlider.addEventListener('input', (e) => {
+            let value = parseInt(e.target.value);
+            filter.setProperty('notanBands', value);
+            oldValueDisplay.textContent = value;
+            
+            this.filterManager.cache.needsUpdate = true;
+            if (this.onFilterChange) {
+                this.onFilterChange();
+            }
+        });
+        
+        // Update display value
+        oldValueDisplay.textContent = currentValue;
+        
+        // Replace the old slider with the new one
+        oldSlider.parentNode.replaceChild(newSlider, oldSlider);
+        
+        // Update the control references in the map
+        const controls = this.controls.get('shape');
+        if (controls && controls.sliders) {
+            for (let i = 0; i < controls.sliders.length; i++) {
+                if (controls.sliders[i].element && controls.sliders[i].element.id === 'notanBands') {
+                    controls.sliders[i].element = newSlider;
+                    break;
+                }
+            }
         }
     }
 
@@ -315,7 +443,7 @@ export class FilterUIManager {
         // Shape filter configuration
         const shapeSliderConfigs = [
             { id: 'notanBands', min: 0, max: 8, step: 1 },
-            { id: 'blockBandDepth', min: 0, max: 6, step: 1 },
+            { id: 'blockBandDepth', min: 1, max: 6, step: 1 },
             { id: 'shapeOpacity', min: 0, max: 100, step: 1 }
         ];
 
