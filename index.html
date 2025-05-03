@@ -660,10 +660,10 @@
                                 <span class="text-xs text-zinc-400 cursor-pointer hover:text-zinc-200 transition-colors duration-200" id="temperatureValue" data-reset-value="0">0</span>
                             </div>
                             <div class="flex items-center gap-2">
-                                <span class="text-[10px] text-zinc-500">Cool</span>
+                                <span class="text-[10px] text-zinc-500 w-7">Cool</span>
                                 <input type="range" id="temperature" min="-100" max="100" step="1" value="0"
                                     class="w-full">
-                                <span class="text-[10px] text-zinc-500">Warm</span>
+                                <span class="text-[10px] text-zinc-500 w-7 text-right">Warm</span>
                             </div>
                         </div>
                     </div>
@@ -686,17 +686,66 @@
                             </button>
                         </div>
 
-                        <!-- Notan Bands -->
+                        <!-- Shape Filter Type Selector and Total Bands (in same row) -->
                         <div class="space-y-2">
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs text-zinc-400">Notan Bands</span>
-                                <span class="text-xs text-zinc-400 cursor-pointer hover:text-zinc-200 transition-colors duration-200" id="notanBandsValue" data-reset-value="3">3</span>
+                            <div class="flex justify-between">
+                                <!-- Filter Type column (3/4 width) -->
+                                <div class="w-3/4">
+                                    <span class="text-xs text-zinc-400 block mb-1">Filter Type</span>
+                                    <div class="grid grid-cols-2 bg-zinc-900/50 rounded-md p-0.5 gap-0.5">
+                                        <button type="button" id="blockInFilterTypeBtn" class="text-xs py-1.5 rounded active:scale-95 transition-all duration-75" data-filter-type="blockIn" data-active="true">Block In</button>
+                                        <button type="button" id="notanFilterTypeBtn" class="text-xs py-1.5 rounded active:scale-95 transition-all duration-75" data-filter-type="notan" data-active="false">Notan</button>
+                                    </div>
+                                </div>
+                                <!-- Light Levels column (1/4 width) -->
+                                <div class="w-1/5">
+                                    <span class="text-xs text-zinc-400 block mb-1">Light Levels</span>
+                                    <div class="relative">
+                                        <select id="totalBands" class="w-full text-xs text-center text-zinc-400 bg-zinc-850 border border-zinc-700 rounded-md py-1.5 appearance-none hover:text-zinc-200 hover:border-zinc-600 focus:text-zinc-200">
+                                            <option value="2">2</option>
+                                            <option value="3">3</option>
+                                            <option value="4">4</option>
+                                            <option value="5">5</option>
+                                            <option value="6" selected>6</option>
+                                            <option value="8">8</option>
+                                            <option value="10">10</option>
+                                            <option value="12">12</option>
+                                        </select>
+                                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1 text-zinc-400">
+                                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <input type="range" id="notanBands" min="2" max="8" step="1" value="3"
-                                class="w-full">
                         </div>
 
-                        <!-- Opacity -->
+                        <!-- Block In Controls (shown by default) -->
+                        <div id="blockInControls" class="space-y-2">
+                            <!-- Band Depth -->
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs text-zinc-400">Visible Tones</span>
+                                    <span class="text-xs text-zinc-400 cursor-pointer hover:text-zinc-200 transition-colors duration-200" id="blockBandDepthValue" data-reset-value="0">0</span>
+                                </div>
+                                <input type="range" id="blockBandDepth" min="0" max="6" step="1" value="0" class="w-full">
+                            </div>
+                        </div>
+
+                        <!-- Notan Controls (hidden initially) -->
+                        <div id="notanControls" class="space-y-2 hidden">
+                            <!-- Notan Bands -->
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs text-zinc-400">Visible Levels</span>
+                                    <span class="text-xs text-zinc-400 cursor-pointer hover:text-zinc-200 transition-colors duration-200" id="notanBandsValue" data-reset-value="0">0</span>
+                                </div>
+                                <input type="range" id="notanBands" min="0" max="6" step="1" value="0" class="w-full">
+                            </div>
+                        </div>
+
+                        <!-- Opacity (common to both filter types) -->
                         <div class="space-y-2">
                             <div class="flex items-center justify-between">
                                 <span class="text-xs text-zinc-400">Opacity</span>

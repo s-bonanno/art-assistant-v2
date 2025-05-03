@@ -58,6 +58,12 @@ export class FilterUIManager {
         // Create slider controls
         this._createSliderControls(filterName, filter, sliderConfigs);
 
+        // Initialize shape filter special controls if this is the shape filter
+        if (filterName === 'shape') {
+            this._initShapeFilterTypeControls(filter);
+            this._initTotalBandsControl(filter);
+        }
+
         // Store the controls for this filter
         this.controls.set(filterName, {
             toggle: document.getElementById(`${filterName}FilterToggle`),
@@ -96,10 +102,25 @@ export class FilterUIManager {
                     controls.toggle.checked = false;
                     controls.sliders.forEach(({ element, valueDisplay }) => {
                         if (element && valueDisplay) {
-                            element.value = 0;
-                            valueDisplay.textContent = '0';
+                            const resetValue = valueDisplay.dataset.resetValue || "0";
+                            element.value = resetValue;
+                            valueDisplay.textContent = resetValue;
+                            if (element.id === 'shapeOpacity' && resetValue !== "0") {
+                                valueDisplay.textContent = `${resetValue}%`;
+                            }
                         }
                     });
+                }
+
+                // For shape filter, also reset the dropdown and filter type UI
+                if (filterName === 'shape') {
+                    this._updateShapeFilterTypeUI(filter.properties.filterType);
+                    
+                    // Reset total bands dropdown
+                    const totalBandsSelect = document.getElementById('totalBands');
+                    if (totalBandsSelect) {
+                        totalBandsSelect.value = filter.properties.totalBands;
+                    }
                 }
 
                 this.filterManager.cache.needsUpdate = true;
@@ -119,6 +140,11 @@ export class FilterUIManager {
                 // Set initial values
                 slider.value = filter.getProperty(id);
                 valueDisplay.textContent = filter.getProperty(id);
+                
+                // Add % to opacity display
+                if (id === 'shapeOpacity') {
+                    valueDisplay.textContent = `${filter.getProperty(id)}%`;
+                }
 
                 // Set min, max, and step attributes
                 slider.min = min;
@@ -136,7 +162,14 @@ export class FilterUIManager {
                     }
 
                     filter.setProperty(id, parseInt(e.target.value));
-                    valueDisplay.textContent = e.target.value;
+                    
+                    // Update display value
+                    if (id === 'shapeOpacity') {
+                        valueDisplay.textContent = `${e.target.value}%`;
+                    } else {
+                        valueDisplay.textContent = e.target.value;
+                    }
+                    
                     this.filterManager.cache.needsUpdate = true;
                     if (this.onFilterChange) {
                         this.onFilterChange();
@@ -144,6 +177,123 @@ export class FilterUIManager {
                 });
             }
         });
+    }
+
+    _initTotalBandsControl(filter) {
+        const totalBandsSelect = document.getElementById('totalBands');
+        
+        if (totalBandsSelect) {
+            // Set initial value
+            totalBandsSelect.value = filter.properties.totalBands;
+            
+            // Add event listener
+            totalBandsSelect.addEventListener('change', (e) => {
+                const value = parseInt(e.target.value);
+                filter.setProperty('totalBands', value);
+                
+                // Update max for blockBandDepth slider
+                const blockBandDepthSlider = document.getElementById('blockBandDepth');
+                if (blockBandDepthSlider) {
+                    blockBandDepthSlider.max = value;
+                }
+                
+                // Update max for notanBands slider
+                const notanBandsSlider = document.getElementById('notanBands');
+                if (notanBandsSlider) {
+                    notanBandsSlider.max = value;
+                }
+                
+                // Auto-activate the filter if it's inactive
+                if (!filter.active) {
+                    filter.active = true;
+                    const controls = this.controls.get('shape');
+                    if (controls && controls.toggle) {
+                        controls.toggle.checked = true;
+                    }
+                }
+                
+                this.filterManager.cache.needsUpdate = true;
+                if (this.onFilterChange) {
+                    this.onFilterChange();
+                }
+            });
+        }
+    }
+
+    _initShapeFilterTypeControls(filter) {
+        const notanBtn = document.getElementById('notanFilterTypeBtn');
+        const blockInBtn = document.getElementById('blockInFilterTypeBtn');
+        const notanControls = document.getElementById('notanControls');
+        const blockInControls = document.getElementById('blockInControls');
+        
+        if (notanBtn && blockInBtn) {
+            // Set initial state based on filter.properties.filterType
+            this._updateShapeFilterTypeUI(filter.properties.filterType);
+            
+            // Setup button click handlers
+            notanBtn.addEventListener('click', () => {
+                filter.setProperty('filterType', 'notan');
+                this._updateShapeFilterTypeUI('notan');
+                
+                // Auto-activate the filter if it's inactive
+                if (!filter.active) {
+                    filter.active = true;
+                    const controls = this.controls.get('shape');
+                    if (controls && controls.toggle) {
+                        controls.toggle.checked = true;
+                    }
+                }
+                
+                this.filterManager.cache.needsUpdate = true;
+                if (this.onFilterChange) {
+                    this.onFilterChange();
+                }
+            });
+            
+            blockInBtn.addEventListener('click', () => {
+                filter.setProperty('filterType', 'blockIn');
+                this._updateShapeFilterTypeUI('blockIn');
+                
+                // Auto-activate the filter if it's inactive
+                if (!filter.active) {
+                    filter.active = true;
+                    const controls = this.controls.get('shape');
+                    if (controls && controls.toggle) {
+                        controls.toggle.checked = true;
+                    }
+                }
+                
+                this.filterManager.cache.needsUpdate = true;
+                if (this.onFilterChange) {
+                    this.onFilterChange();
+                }
+            });
+        }
+    }
+
+    _updateShapeFilterTypeUI(filterType) {
+        const notanBtn = document.getElementById('notanFilterTypeBtn');
+        const blockInBtn = document.getElementById('blockInFilterTypeBtn');
+        const notanControls = document.getElementById('notanControls');
+        const blockInControls = document.getElementById('blockInControls');
+        
+        if (filterType === 'notan') {
+            // Update buttons
+            notanBtn.setAttribute('data-active', 'true');
+            blockInBtn.setAttribute('data-active', 'false');
+            
+            // Update controls visibility
+            notanControls.classList.remove('hidden');
+            blockInControls.classList.add('hidden');
+        } else if (filterType === 'blockIn') {
+            // Update buttons
+            notanBtn.setAttribute('data-active', 'false');
+            blockInBtn.setAttribute('data-active', 'true');
+            
+            // Update controls visibility
+            notanControls.classList.add('hidden');
+            blockInControls.classList.remove('hidden');
+        }
     }
 
     // Initialize all filter controls
@@ -164,7 +314,8 @@ export class FilterUIManager {
 
         // Shape filter configuration
         const shapeSliderConfigs = [
-            { id: 'notanBands', min: 2, max: 8, step: 1 },
+            { id: 'notanBands', min: 0, max: 8, step: 1 },
+            { id: 'blockBandDepth', min: 0, max: 6, step: 1 },
             { id: 'shapeOpacity', min: 0, max: 100, step: 1 }
         ];
 
