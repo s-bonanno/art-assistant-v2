@@ -1,6 +1,7 @@
 // Canvas size presets
 export const canvasSizePresets = {
     // Standard Paper
+    'a5': { width: 14.8, height: 21.0 },
     'a4': { width: 21.0, height: 29.7 },
     'a3': { width: 29.7, height: 42.0 },
     'a2': { width: 42.0, height: 59.4 },

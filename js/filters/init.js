@@ -3,6 +3,7 @@ import { FilterUIManager } from './FilterUIManager.js';
 import { LightFilter } from './LightFilter.js';
 import { HueSaturationFilter } from './HueSaturationFilter.js';
 import { ShapeFilter } from './shapeFilters.js';
+import { EdgeFilter } from './EdgeFilter.js';
 
 // Create filter manager instance
 export const filterManager = new FilterManager();
@@ -24,6 +25,10 @@ export function initFilters(drawCanvas) {
     const shapeFilter = new ShapeFilter();
     filterManager.registerFilter(shapeFilter);
 
+    // Create and register edge filter
+    const edgeFilter = new EdgeFilter();
+    filterManager.registerFilter(edgeFilter);
+
     // Initialize UI controls for light filter
     filterUIManager.initFilterControls('light', [
         { id: 'exposure', min: -100, max: 100, step: 1 },
@@ -44,6 +49,13 @@ export function initFilters(drawCanvas) {
         { id: 'blockBandDepth', min: 1, max: 6, step: 1 },
         { id: 'totalBands', min: 2, max: 12, step: 1 },
         { id: 'shapeOpacity', min: 0, max: 100, step: 1 }
+    ]);
+
+    // Initialize UI controls for edge filter
+    filterUIManager.initFilterControls('edge', [
+        { id: 'threshold', min: 0, max: 100, step: 1 },
+        { id: 'intensity', min: 0, max: 100, step: 1 },
+        { id: 'opacity', min: 0, max: 100, step: 1 }
     ]);
 
     // Set the draw callback

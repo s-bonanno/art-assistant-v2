@@ -87,6 +87,21 @@ export class FilterUIManager {
                 }
             });
         }
+
+        // Add multiply mode toggle for edge filter
+        if (filterName === 'edge') {
+            const multiplyElement = document.getElementById(`${filterName}FilterMultiply`);
+            if (multiplyElement) {
+                multiplyElement.checked = filter.properties.multiplyMode;
+                multiplyElement.addEventListener('change', (e) => {
+                    filter.properties.multiplyMode = e.target.checked;
+                    this.filterManager.cache.needsUpdate = true;
+                    if (this.onFilterChange) {
+                        this.onFilterChange();
+                    }
+                });
+            }
+        }
     }
 
     _createResetControl(filterName, filter, sliderConfigs) {
@@ -100,6 +115,13 @@ export class FilterUIManager {
                 const controls = this.controls.get(filterName);
                 if (controls) {
                     controls.toggle.checked = false;
+                    // Reset multiply mode for edge filter
+                    if (filterName === 'edge') {
+                        const multiplyElement = document.getElementById(`${filterName}FilterMultiply`);
+                        if (multiplyElement) {
+                            multiplyElement.checked = false;
+                        }
+                    }
                     controls.sliders.forEach(({ element, valueDisplay }) => {
                         if (element && valueDisplay) {
                             const resetValue = valueDisplay.dataset.resetValue || "0";
@@ -169,9 +191,7 @@ export class FilterUIManager {
                         }
                     }
 
-                    // For blockBandDepth values 0 and 1, both should turn off the filter
                     let value = parseInt(e.target.value);
-                    
                     filter.setProperty(id, value);
                     
                     // Update display value
@@ -183,7 +203,9 @@ export class FilterUIManager {
                         valueDisplay.textContent = value;
                     }
                     
-                    this.filterManager.cache.needsUpdate = true;
+                    // Ensure the filter manager knows about the change
+                    this.filterManager.updateFilterState(filterName, true, { [id]: value });
+                    
                     if (this.onFilterChange) {
                         this.onFilterChange();
                     }

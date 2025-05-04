@@ -44,26 +44,54 @@ export class FilterManager {
 
     // Combined filter application in a single pass
     _applyAllFilters(imageData) {
-        const data = imageData.data;
+        // Store original image data for edge filter
+        const originalImageData = new ImageData(
+            new Uint8ClampedArray(imageData.data),
+            imageData.width,
+            imageData.height
+        );
         
         // Get active filters
         const lightFilter = this.filters.get('light');
         const hueSatFilter = this.filters.get('hueSaturation');
         const shapeFilter = this.filters.get('shape');
+        const edgeFilter = this.filters.get('edge');
         
-        // Apply shape filter first if active
+        // Create filtered base image by applying all non-edge filters
         if (shapeFilter?.active) {
             shapeFilter.apply(imageData);
         }
         
-        // Then apply light adjustments if active
         if (lightFilter?.active) {
             lightFilter.apply(imageData);
         }
         
-        // Finally apply color adjustments if active
         if (hueSatFilter?.active) {
             hueSatFilter.apply(imageData);
+        }
+        
+        // If edge filter is active, apply it to original image and blend
+        if (edgeFilter?.active) {
+            // Create a copy of the current image data (either original or filtered)
+            const edgeResult = new ImageData(
+                new Uint8ClampedArray(edgeFilter.properties.multiplyMode ? imageData.data : originalImageData.data),
+                imageData.width,
+                imageData.height
+            );
+            edgeFilter.apply(edgeResult);
+            
+            // Blend edge result with filtered base image based on opacity
+            const opacity = edgeFilter.properties.opacity / 100;
+            const data = imageData.data;
+            const edgeData = edgeResult.data;
+            
+            for (let i = 0; i < data.length; i += 4) {
+                data[i] = Math.round(edgeData[i] * opacity + data[i] * (1 - opacity));
+                data[i + 1] = Math.round(edgeData[i + 1] * opacity + data[i + 1] * (1 - opacity));
+                data[i + 2] = Math.round(edgeData[i + 2] * opacity + data[i + 2] * (1 - opacity));
+                // Keep alpha channel unchanged
+                // data[i + 3] remains unchanged
+            }
         }
         
         return imageData;
@@ -181,6 +209,14 @@ export class FilterManager {
                         return true;
                     }
                     break;
+
+                case 'edge':
+                    if (currentProps.threshold !== lastProps.threshold ||
+                        currentProps.intensity !== lastProps.intensity ||
+                        currentProps.multiplyMode !== lastProps.multiplyMode) {
+                        return true;
+                    }
+                    break;
             }
         }
         return false;
@@ -207,6 +243,12 @@ export class FilterManager {
                 case 'shape':
                     properties.notanBands = filter.properties.notanBands;
                     properties.shapeOpacity = filter.properties.shapeOpacity;
+                    break;
+
+                case 'edge':
+                    properties.threshold = filter.properties.threshold;
+                    properties.intensity = filter.properties.intensity;
+                    properties.multiplyMode = filter.properties.multiplyMode;
                     break;
             }
             

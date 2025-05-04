@@ -486,6 +486,7 @@
                                 <select id="canvasSizePreset" class="w-full text-xs text-zinc-400 bg-zinc-850 border border-zinc-700 rounded-md pl-2 pr-8 py-1.5 appearance-none hover:text-zinc-200 hover:border-zinc-600 focus:text-zinc-200">
                                     <option value="custom">Custom</option>
                                     <optgroup label="Standard Paper">
+                                        <option value="a5">A5 (14.8 x 21.0 cm)</option>
                                         <option value="a4">A4 (21.0 x 29.7 cm)</option>
                                         <option value="a3">A3 (29.7 x 42.0 cm)</option>
                                         <option value="a2">A2 (42.0 x 59.4 cm)</option>
@@ -565,6 +566,7 @@
                     <button class="tab-button active" data-tab="lightTab">Light</button>
                     <button class="tab-button" data-tab="hueSaturationTab">Colour</button>
                     <button class="tab-button" data-tab="shapeTab">Shape</button>
+                    <button class="tab-button" data-tab="edgeTab">Edges</button>
                 </div>
 
                 <!-- Light Tab -->
@@ -693,7 +695,7 @@
                                 <div class="w-3/4">
                                     <span class="text-xs text-zinc-400 block mb-1">Filter Type</span>
                                     <div class="grid grid-cols-2 bg-zinc-900/50 rounded-md p-0.5 gap-0.5">
-                                        <button type="button" id="blockInFilterTypeBtn" class="text-xs py-1.5 rounded active:scale-95 transition-all duration-75" data-filter-type="blockIn" data-active="true">Monotone</button>
+                                        <button type="button" id="blockInFilterTypeBtn" class="text-xs py-1.5 rounded active:scale-95 transition-all duration-75" data-filter-type="blockIn" data-active="true">Greyscale</button>
                                         <button type="button" id="colorBlocksFilterTypeBtn" class="text-xs py-1.5 rounded active:scale-95 transition-all duration-75" data-filter-type="colorBlocks" data-active="false">Colour</button>
                                     </div>
                                 </div>
@@ -701,14 +703,17 @@
                                 <div class="w-1/5">
                                     <span class="text-xs text-zinc-400 block mb-1">Light Levels</span>
                                     <div class="relative">
-                                        <select id="totalBands" class="w-full text-xs text-center text-zinc-400 bg-zinc-850 border border-zinc-700 rounded-md py-1.5 appearance-none hover:text-zinc-200 hover:border-zinc-600 focus:text-zinc-200">
+                                        <select id="totalBands" class="w-full text-xs text-zinc-400 bg-zinc-850 border border-zinc-700 rounded-md pl-2 pr-6 py-1.5 appearance-none hover:text-zinc-200 hover:border-zinc-600 focus:text-zinc-200">
                                             <option value="2">2</option>
                                             <option value="3">3</option>
                                             <option value="4">4</option>
                                             <option value="5">5</option>
                                             <option value="6" selected>6</option>
+                                            <option value="7">7</option>
                                             <option value="8">8</option>
+                                            <option value="9">9</option>
                                             <option value="10">10</option>
+                                            <option value="11">11</option>
                                             <option value="12">12</option>
                                         </select>
                                         <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1 text-zinc-400">
@@ -740,6 +745,64 @@
                                 <span class="text-xs text-zinc-400 cursor-pointer hover:text-zinc-200 transition-colors duration-200" id="shapeOpacityValue" data-reset-value="100">100%</span>
                             </div>
                             <input type="range" id="shapeOpacity" min="0" max="100" step="1" value="100" class="w-full">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Edge Tab -->
+                <div class="tab-content hidden" id="edgeTab">
+                    <div class="space-y-3">
+                        <!-- Active Toggle and Reset Button -->
+                        <div class="flex items-center justify-between pb-2 border-b border-zinc-800/50">
+                            <div class="flex items-center gap-4">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-xs text-zinc-400">Active</span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="edgeFilterToggle" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-zinc-800 hover:bg-zinc-700 rounded-full peer peer-checked:bg-zinc-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-zinc-400 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full peer-checked:after:bg-white"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-xs text-zinc-400">Multiply</span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="edgeFilterMultiply" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-zinc-800 hover:bg-zinc-700 rounded-full peer peer-checked:bg-zinc-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-zinc-400 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full peer-checked:after:bg-white"></div>
+                                    </label>
+                                </div>
+                            </div>
+                            <button id="edgeFilterReset" class="text-xs text-zinc-400 hover:text-zinc-200 transition-colors duration-200">
+                                Reset
+                            </button>
+                        </div>
+
+                        <!-- Threshold -->
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-zinc-400">Threshold</span>
+                                <span class="text-xs text-zinc-400 cursor-pointer hover:text-zinc-200 transition-colors duration-200" id="thresholdValue" data-reset-value="50">50</span>
+                            </div>
+                            <input type="range" id="threshold" min="0" max="100" step="1" value="50"
+                                class="w-full">
+                        </div>
+
+                        <!-- Intensity -->
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-zinc-400">Intensity</span>
+                                <span class="text-xs text-zinc-400 cursor-pointer hover:text-zinc-200 transition-colors duration-200" id="intensityValue" data-reset-value="50">50</span>
+                            </div>
+                            <input type="range" id="intensity" min="0" max="100" step="1" value="50"
+                                class="w-full">
+                        </div>
+
+                        <!-- Opacity -->
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-zinc-400">Opacity</span>
+                                <span class="text-xs text-zinc-400 cursor-pointer hover:text-zinc-200 transition-colors duration-200" id="opacityValue" data-reset-value="100">100%</span>
+                            </div>
+                            <input type="range" id="opacity" min="0" max="100" step="1" value="100"
+                                class="w-full">
                         </div>
                     </div>
                 </div>

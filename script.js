@@ -1,6 +1,7 @@
 import { convertToUnit, convertFromUnit } from './js/utils/unitConversion.js';
 import { gridConfig, updateColorSwatchSelection, setDefaultGridStyle, initGridStyleListeners, getCurrentGridType, updateGridPreview } from './js/utils/gridStyle.js';
-import { getZoom, setZoom, getPanX, setPanX, getPanY, setPanY, resetZoomAndPan, zoomTo100, initZoomPanListeners, calculateGridSizeLimits } from './js/utils/zoomPan.js';
+import { getZoom, setZoom, getPanX, setPanX, getPanY, setPanY, resetZoomAndPan, zoomTo100, initZoomPanListeners } from './js/utils/zoomPan.js';
+import { calculateGridSizeLimits } from './js/utils/gridLimits.js';
 import { canvasSizePresets, initCanvasPresetSelector, resetPresetToCustom } from './js/utils/canvasPresets.js';
 import { OrientationManager } from './js/utils/orientation.js';
 import { exportCanvas } from './js/utils/exportCanvas.js';
@@ -60,7 +61,8 @@ let config = {
     canvasHeight: 500, // Will be recalculated
     imageOffsetXPercent: 0, // Track image position as percentage
     imageOffsetYPercent: 0,  // Track image position as percentage
-    viewMode: 'canvas' // Current view mode
+    viewMode: 'canvas', // Current view mode
+    pixelsPerCm: 100 // Added for new resize function
 };
 
 // Initialize canvas size preset selector
@@ -203,6 +205,9 @@ function resizeCanvasToFit() {
             // Update config with current pixel dimensions
             config.canvasWidth = width;
             config.canvasHeight = height;
+            
+            // Calculate and store pixels per cm
+            config.pixelsPerCm = width / config.canvasWidthCm;
         }
     }
 
@@ -922,56 +927,18 @@ function updateViewMode(showAll) {
             filterManager.cache.needsUpdate = true;
         }
         
-        // Restore grid settings if they exist
-        if (targetState.gridSettings) {
-            // Preserve grid type, color, opacity, and line weight
-            if (targetState.gridSettings.color) {
-                gridConfig.color = targetState.gridSettings.color;
-            }
-            
-            if (typeof targetState.gridSettings.opacity === 'number') {
-                gridConfig.opacity = targetState.gridSettings.opacity;
-            }
-            
-            if (targetState.gridSettings.lineWeight) {
-                gridConfig.lineWeight = targetState.gridSettings.lineWeight;
-            }
-            
-            if (typeof targetState.gridSettings.spacing === 'number') {
-                config.gridSpacing = targetState.gridSettings.spacing;
-            }
-            
-            if (typeof targetState.gridSettings.sizeCm === 'number') {
-                config.gridSizeCm = targetState.gridSettings.sizeCm;
-            }
-        }
+        // Reset grid size when switching modes
+        updateGridSpacingUtil(config, unitSelect, gridSquareSizeInput, gridSizeSlider, gridSizeValue, drawCanvas, currentImage, true);
         
-        // Update grid controls UI
-        updateGridControlsVisibility(gridConfig.type);
+        // Update grid controls visibility
+        updateGridControlsVisibilityUtil(currentGridType);
         
-        // If switching to full mode, always set default grid size to 1/5th of longest side
-        if (showAll) {
-            setDefaultGridSize(config, currentImage, unitSelect, gridSquareSizeInput, gridSizeSlider, gridSizeValue);
-        }
-        
-        // Restore the previous grid type
-        gridConfig.type = currentGridType;
-        
-        // If switching to full mode, fit the image to screen
-        if (showAll) {
-            fitToScreen();
-        }
-        
-        // If canvas was resized or we need to redraw, do it now
-        if (wasResized) {
-            // Add a small delay to ensure canvas has been properly resized
-            setTimeout(() => {
-                drawCanvas();
-            }, 0);
-        } else {
-            drawCanvas();
-        }
+        // Update grid size limits
+        updateGridSizeLimits(config, gridSizeSlider, gridSquareSizeInput, currentImage);
     }
+    
+    // Redraw canvas
+    drawCanvas();
 }
 
 // Helper function to update grid slider UI
