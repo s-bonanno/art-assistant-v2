@@ -192,20 +192,20 @@ export class FilterUIManager {
                     }
 
                     let value = parseInt(e.target.value);
-                    filter.setProperty(id, value);
+                    // Use updateFilterState instead of setProperty
+                    this.filterManager.updateFilterState(filterName, filter.active, {
+                        [id]: value
+                    });
                     
                     // Update display value
                     if (id === 'blockBandDepth' && value === 1) {
                         valueDisplay.textContent = "All";
                     } else if (id === 'shapeOpacity') {
-                        valueDisplay.textContent = `${e.target.value}%`;
+                        valueDisplay.textContent = `${value}%`;
                     } else {
                         valueDisplay.textContent = value;
                     }
-                    
-                    // Ensure the filter manager knows about the change
-                    this.filterManager.updateFilterState(filterName, true, { [id]: value });
-                    
+
                     if (this.onFilterChange) {
                         this.onFilterChange();
                     }

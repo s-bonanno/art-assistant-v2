@@ -9,12 +9,40 @@ export class EdgeFilter extends BaseFilter {
             opacity: 100,   // Opacity of the edge effect (0-100)
             multiplyMode: false  // Whether to use multiply mode
         };
+        this.edgeData = null;  // Store the edge detection result
+        this.originalImageData = null;  // Store the original image data
     }
 
-    _process(imageData) {
-        const width = imageData.width;
-        const height = imageData.height;
-        const data = imageData.data;
+    // Update properties and re-detect edges if needed
+    updateProperties(newProperties) {
+        const needsRedetect = 
+            (newProperties.threshold !== undefined && newProperties.threshold !== this.properties.threshold) ||
+            (newProperties.intensity !== undefined && newProperties.intensity !== this.properties.intensity);
+
+        Object.assign(this.properties, newProperties);
+
+        if (needsRedetect && this.originalImageData) {
+            this._detectEdges();
+        }
+    }
+
+    // Store the original image data
+    setOriginalImage(imageData) {
+        this.originalImageData = new ImageData(
+            new Uint8ClampedArray(imageData.data),
+            imageData.width,
+            imageData.height
+        );
+        this._detectEdges();
+    }
+
+    // Detect edges from the original image
+    _detectEdges() {
+        if (!this.originalImageData) return;
+
+        const width = this.originalImageData.width;
+        const height = this.originalImageData.height;
+        const data = this.originalImageData.data;
         
         // Convert to grayscale first
         const grayscale = new Uint8ClampedArray(width * height);
@@ -37,6 +65,9 @@ export class EdgeFilter extends BaseFilter {
             0, 0, 0,
             1, 2, 1
         ];
+
+        // Create edge data array
+        this.edgeData = new Uint8ClampedArray(width * height * 4);
 
         // Apply Sobel operator
         for (let y = 1; y < height - 1; y++) {
@@ -62,35 +93,48 @@ export class EdgeFilter extends BaseFilter {
                 const intensity = this.properties.intensity / 100; // Convert 0-100 to 0-1
                 
                 // Calculate edge value
-                let edgeValue;
-                if (this.properties.multiplyMode) {
-                    // For multiply mode, we want darker edges (lower values)
-                    edgeValue = magnitude > threshold ? 
-                        Math.max(0, 255 - magnitude * intensity) : 255;
-                } else {
-                    // For normal mode, we want white background with black edges
-                    edgeValue = magnitude > threshold ? 
-                        255 - Math.min(255, magnitude * intensity) : 255;
-                }
+                const edgeValue = magnitude > threshold ? 
+                    255 - Math.min(255, magnitude * intensity) : 255;
                 
-                // Set output pixel
+                // Store edge value in all channels
                 const outputIdx = (y * width + x) * 4;
-                if (this.properties.multiplyMode) {
-                    // In multiply mode, multiply the edge value with the filtered image
-                    const factor = edgeValue / 255;
-                    data[outputIdx] = Math.round(data[outputIdx] * factor);     // R
-                    data[outputIdx + 1] = Math.round(data[outputIdx + 1] * factor); // G
-                    data[outputIdx + 2] = Math.round(data[outputIdx + 2] * factor); // B
-                } else {
-                    // In normal mode, just set the edge value
-                    data[outputIdx] = edgeValue;     // R
-                    data[outputIdx + 1] = edgeValue; // G
-                    data[outputIdx + 2] = edgeValue; // B
-                }
-                data[outputIdx + 3] = 255;       // A
+                this.edgeData[outputIdx] = edgeValue;     // R
+                this.edgeData[outputIdx + 1] = edgeValue; // G
+                this.edgeData[outputIdx + 2] = edgeValue; // B
+                this.edgeData[outputIdx + 3] = 255;       // A
             }
         }
+    }
 
+    // Apply the stored edges to any image data
+    apply(imageData) {
+        if (!this.edgeData) return imageData;
+
+        const data = imageData.data;
+        const opacity = this.properties.opacity / 100;
+        
+        // Create a temporary array to store the result
+        const result = new Uint8ClampedArray(data.length);
+        
+        for (let i = 0; i < data.length; i += 4) {
+            if (this.properties.multiplyMode) {
+                // In multiply mode, multiply the edge value with the image
+                const factor = this.edgeData[i] / 255;
+                result[i] = Math.round(data[i] * factor);
+                result[i + 1] = Math.round(data[i + 1] * factor);
+                result[i + 2] = Math.round(data[i + 2] * factor);
+                result[i + 3] = data[i + 3]; // Keep original alpha
+            } else {
+                // In normal mode, blend the edge result with the image
+                result[i] = Math.round(this.edgeData[i] * opacity + data[i] * (1 - opacity));
+                result[i + 1] = Math.round(this.edgeData[i + 1] * opacity + data[i + 1] * (1 - opacity));
+                result[i + 2] = Math.round(this.edgeData[i + 2] * opacity + data[i + 2] * (1 - opacity));
+                result[i + 3] = data[i + 3]; // Keep original alpha
+            }
+        }
+        
+        // Copy the result back to the input imageData
+        data.set(result);
         return imageData;
     }
 
@@ -100,5 +144,7 @@ export class EdgeFilter extends BaseFilter {
         this.properties.intensity = 50;
         this.properties.opacity = 100;
         this.properties.multiplyMode = false;
+        this.edgeData = null;
+        this.originalImageData = null;
     }
 } 

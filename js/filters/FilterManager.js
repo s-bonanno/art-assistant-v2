@@ -44,56 +44,52 @@ export class FilterManager {
 
     // Combined filter application in a single pass
     _applyAllFilters(imageData) {
-        // Store original image data for edge filter
-        const originalImageData = new ImageData(
-            new Uint8ClampedArray(imageData.data),
-            imageData.width,
-            imageData.height
-        );
-        
         // Get active filters
         const lightFilter = this.filters.get('light');
         const hueSatFilter = this.filters.get('hueSaturation');
         const shapeFilter = this.filters.get('shape');
         const edgeFilter = this.filters.get('edge');
         
-        // Create filtered base image by applying all non-edge filters
+        // Create a copy of the original image data
+        const originalData = new ImageData(
+            new Uint8ClampedArray(imageData.data),
+            imageData.width,
+            imageData.height
+        );
+        
+        // Create a copy for the filtered result
+        let filteredData = new ImageData(
+            new Uint8ClampedArray(imageData.data),
+            imageData.width,
+            imageData.height
+        );
+        
+        // Apply all non-edge filters first
         if (shapeFilter?.active) {
-            shapeFilter.apply(imageData);
+            shapeFilter.apply(filteredData);
         }
         
         if (lightFilter?.active) {
-            lightFilter.apply(imageData);
+            lightFilter.apply(filteredData);
         }
         
         if (hueSatFilter?.active) {
-            hueSatFilter.apply(imageData);
+            hueSatFilter.apply(filteredData);
         }
         
-        // If edge filter is active, apply it to original image and blend
+        // Apply edge filter last, if active
         if (edgeFilter?.active) {
-            // Create a copy of the current image data (either original or filtered)
-            const edgeResult = new ImageData(
-                new Uint8ClampedArray(edgeFilter.properties.multiplyMode ? imageData.data : originalImageData.data),
-                imageData.width,
-                imageData.height
-            );
-            edgeFilter.apply(edgeResult);
-            
-            // Blend edge result with filtered base image based on opacity
-            const opacity = edgeFilter.properties.opacity / 100;
-            const data = imageData.data;
-            const edgeData = edgeResult.data;
-            
-            for (let i = 0; i < data.length; i += 4) {
-                data[i] = Math.round(edgeData[i] * opacity + data[i] * (1 - opacity));
-                data[i + 1] = Math.round(edgeData[i + 1] * opacity + data[i + 1] * (1 - opacity));
-                data[i + 2] = Math.round(edgeData[i + 2] * opacity + data[i + 2] * (1 - opacity));
-                // Keep alpha channel unchanged
-                // data[i + 3] remains unchanged
+            // Store the original image data for edge detection if not already stored
+            if (!edgeFilter.originalImageData) {
+                edgeFilter.setOriginalImage(originalData);
             }
+            
+            // Apply the edge filter to the filtered result
+            edgeFilter.apply(filteredData);
         }
         
+        // Copy the final result back to the input imageData
+        imageData.data.set(filteredData.data);
         return imageData;
     }
 
@@ -125,13 +121,25 @@ export class FilterManager {
         if (filter) {
             filter.active = active;
             if (properties) {
-                Object.assign(filter.properties, properties);
+                if (filter.updateProperties) {
+                    filter.updateProperties(properties);
+                } else {
+                    Object.assign(filter.properties, properties);
+                }
             }
-            // Always invalidate cache for shape filter changes
-            if (filterName === 'shape') {
+            
+            // Always invalidate cache for shape or edge filter changes
+            if (filterName === 'shape' || filterName === 'edge') {
                 this.cache.needsUpdate = true;
+                this.cache.imageData = null; // Force a complete cache refresh
             }
+            
             this.invalidateCache();
+            
+            // Force a redraw by triggering the debounced draw
+            if (this._debouncedDraw) {
+                this._debouncedDraw();
+            }
         }
     }
 
