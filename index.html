@@ -565,7 +565,7 @@
                 <div class="tab-group">
                     <button class="tab-button active" data-tab="lightTab">Light</button>
                     <button class="tab-button" data-tab="hueSaturationTab">Colour</button>
-                    <button class="tab-button" data-tab="shapeTab">Shape</button>
+                    <button class="tab-button" data-tab="shapeTab">Values</button>
                     <button class="tab-button" data-tab="edgeTab">Edges</button>
                 </div>
 
@@ -671,7 +671,7 @@
                     </div>
                 </div>
 
-                <!-- Shape Tab -->
+                <!-- Values Tab -->
                 <div class="tab-content hidden" id="shapeTab">
                     <div class="space-y-3">
                         <!-- Active Toggle and Reset Button -->
@@ -693,7 +693,7 @@
                             <div class="flex justify-between">
                                 <!-- Filter Type column (3/4 width) -->
                                 <div class="w-3/4">
-                                    <span class="text-xs text-zinc-400 block mb-1">Filter Type</span>
+                                    <span class="text-xs text-zinc-400 block mb-1">Mode</span>
                                     <div class="grid grid-cols-2 bg-zinc-900/50 rounded-md p-0.5 gap-0.5">
                                         <button type="button" id="blockInFilterTypeBtn" class="text-xs py-1.5 rounded active:scale-95 transition-all duration-75" data-filter-type="blockIn" data-active="true">Greyscale</button>
                                         <button type="button" id="colorBlocksFilterTypeBtn" class="text-xs py-1.5 rounded active:scale-95 transition-all duration-75" data-filter-type="colorBlocks" data-active="false">Colour</button>
@@ -731,8 +731,8 @@
                             <!-- Band Depth -->
                             <div class="space-y-2">
                                 <div class="flex items-center justify-between">
-                                    <span class="text-xs text-zinc-400">Visible Tones</span>
-                                    <span class="text-xs text-zinc-400 cursor-pointer hover:text-zinc-200 transition-colors duration-200" id="blockBandDepthValue" data-reset-value="1">All colours</span>
+                                    <span class="text-xs text-zinc-400">Visible Levels</span>
+                                    <span class="text-xs text-zinc-400 cursor-pointer hover:text-zinc-200 transition-colors duration-200" id="blockBandDepthValue" data-reset-value="1"></span>
                                 </div>
                                 <input type="range" id="blockBandDepth" min="1" max="6" step="1" value="1" class="w-full">
                             </div>

@@ -127,9 +127,9 @@ export class FilterUIManager {
                             const resetValue = valueDisplay.dataset.resetValue || "0";
                             element.value = resetValue;
                             
-                            // Display "All colours" when blockBandDepth is set to 1
+                            // Display "All" when blockBandDepth is set to 1
                             if (element.id === 'blockBandDepth' && resetValue === "1") {
-                                valueDisplay.textContent = "All colours";
+                                valueDisplay.textContent = "All";
                             } else if (element.id === 'shapeOpacity' && resetValue !== "0") {
                                 valueDisplay.textContent = `${resetValue}%`;
                             } else {
@@ -169,7 +169,7 @@ export class FilterUIManager {
                 
                 // Special display for blockBandDepth value 1
                 if (id === 'blockBandDepth' && filter.getProperty(id) === 1) {
-                    valueDisplay.textContent = "All colours";
+                    valueDisplay.textContent = "All";
                 } else if (id === 'shapeOpacity') {
                     valueDisplay.textContent = `${filter.getProperty(id)}%`;
                 } else {
@@ -196,7 +196,7 @@ export class FilterUIManager {
                     
                     // Update display value
                     if (id === 'blockBandDepth' && value === 1) {
-                        valueDisplay.textContent = "All colours";
+                        valueDisplay.textContent = "All";
                     } else if (id === 'shapeOpacity') {
                         valueDisplay.textContent = `${e.target.value}%`;
                     } else {
@@ -311,7 +311,7 @@ export class FilterUIManager {
             filter.setProperty('blockBandDepth', value);
             
             if (value === 1) {
-                oldValueDisplay.textContent = "All colours";
+                oldValueDisplay.textContent = "All";
             } else {
                 oldValueDisplay.textContent = value;
             }
@@ -324,7 +324,7 @@ export class FilterUIManager {
         
         // Update display value
         if (currentValue === 1) {
-            oldValueDisplay.textContent = "All colours";
+            oldValueDisplay.textContent = "All";
         } else {
             oldValueDisplay.textContent = currentValue;
         }
