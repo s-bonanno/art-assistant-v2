@@ -93,8 +93,8 @@ function handleZoomFullMode(mouseX, mouseY, zoomFactor, currentImage) {
     // Calculate maximum zoom (1000% or 10x)
     const maxZoom = 10;
     
-    // Apply zoom with dynamic minimum based on viewport size
-    const newZoom = Math.min(Math.max(minZoom * 0.5, _zoom * zoomFactor), maxZoom);
+    // Apply zoom with dynamic minimum based on viewport size (25% of fit-to-screen)
+    const newZoom = Math.min(Math.max(minZoom * 0.25, _zoom * zoomFactor), maxZoom);
     
     // Forward transform to get new pan
     // 1. Start with image position
