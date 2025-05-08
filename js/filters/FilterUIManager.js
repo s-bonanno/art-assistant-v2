@@ -4,6 +4,13 @@ export class FilterUIManager {
         this.controls = new Map();
         this.onFilterChange = null;
         this._initFilterTabs();
+        this._initLightFilter();
+        this._initHueSaturationFilter();
+        this._initShapeFilter();
+        this._initEdgeFilter();
+        this._initBlurFilter();
+        this._initTabButtons();
+        this._initResetAllButton();
     }
 
     _initFilterTabs() {
@@ -398,13 +405,105 @@ export class FilterUIManager {
             { id: 'shapeOpacity', min: 0, max: 100, step: 1 }
         ];
 
+        // Blur filter configuration
+        const blurSliderConfigs = [
+            { id: 'blurRadius', min: 0, max: 100, step: 1 }
+        ];
+
         this.initFilterControls('light', lightSliderConfigs);
         this.initFilterControls('hueSaturation', hueSaturationSliderConfigs);
         this.initFilterControls('shape', shapeSliderConfigs);
+        this.initFilterControls('blur', blurSliderConfigs);
     }
 
     // Set the callback for when filters change
     setOnFilterChange(callback) {
         this.onFilterChange = callback;
+    }
+
+    _initLightFilter() {
+        // Implementation of _initLightFilter method
+    }
+
+    _initHueSaturationFilter() {
+        // Implementation of _initHueSaturationFilter method
+    }
+
+    _initShapeFilter() {
+        // Implementation of _initShapeFilter method
+    }
+
+    _initEdgeFilter() {
+        // Implementation of _initEdgeFilter method
+    }
+
+    _initBlurFilter() {
+        const blurSliderConfigs = [
+            { id: 'blurRadius', min: 0, max: 100, step: 1 }
+        ];
+        this.initFilterControls('blur', blurSliderConfigs);
+    }
+
+    _initTabButtons() {
+        // Implementation of _initTabButtons method
+    }
+
+    _initResetAllButton() {
+        const resetAllBtn = document.getElementById('resetAllFiltersBtn');
+        if (resetAllBtn) {
+            resetAllBtn.addEventListener('click', () => {
+                // Reset all filters
+                this.filterManager.resetAllFilters();
+                
+                // Update UI for all filters
+                for (const [filterName, controls] of this.controls) {
+                    if (controls.toggle) {
+                        controls.toggle.checked = false;
+                    }
+                    
+                    // Reset multiply mode for edge filter
+                    if (filterName === 'edge') {
+                        const multiplyElement = document.getElementById(`${filterName}FilterMultiply`);
+                        if (multiplyElement) {
+                            multiplyElement.checked = false;
+                        }
+                    }
+                    
+                    // Reset all sliders to their default values
+                    controls.sliders.forEach(({ element, valueDisplay }) => {
+                        if (element && valueDisplay) {
+                            const resetValue = valueDisplay.dataset.resetValue || "0";
+                            element.value = resetValue;
+                            
+                            // Display "All" when blockBandDepth is set to 1
+                            if (element.id === 'blockBandDepth' && resetValue === "1") {
+                                valueDisplay.textContent = "All";
+                            } else if (element.id === 'shapeOpacity' && resetValue !== "0") {
+                                valueDisplay.textContent = `${resetValue}%`;
+                            } else {
+                                valueDisplay.textContent = resetValue;
+                            }
+                        }
+                    });
+                }
+                
+                // For shape filter, also reset the dropdown and filter type UI
+                const shapeFilter = this.filterManager.getFilter('shape');
+                if (shapeFilter) {
+                    this._updateShapeFilterTypeUI(shapeFilter.properties.filterType);
+                    
+                    // Reset total bands dropdown
+                    const totalBandsSelect = document.getElementById('totalBands');
+                    if (totalBandsSelect) {
+                        totalBandsSelect.value = shapeFilter.properties.totalBands;
+                    }
+                }
+                
+                // Trigger filter change callback
+                if (this.onFilterChange) {
+                    this.onFilterChange();
+                }
+            });
+        }
     }
 } 

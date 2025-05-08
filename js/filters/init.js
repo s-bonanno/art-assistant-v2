@@ -4,6 +4,7 @@ import { LightFilter } from './LightFilter.js';
 import { HueSaturationFilter } from './HueSaturationFilter.js';
 import { ShapeFilter } from './shapeFilters.js';
 import { EdgeFilter } from './EdgeFilter.js';
+import { BlurFilter } from './BlurFilter.js';
 
 // Create filter manager instance
 export const filterManager = new FilterManager();
@@ -28,6 +29,10 @@ export function initFilters(drawCanvas) {
     // Create and register edge filter
     const edgeFilter = new EdgeFilter();
     filterManager.registerFilter(edgeFilter);
+
+    // Create and register blur filter
+    const blurFilter = new BlurFilter();
+    filterManager.registerFilter(blurFilter);
 
     // Initialize UI controls for light filter
     filterUIManager.initFilterControls('light', [
@@ -56,6 +61,11 @@ export function initFilters(drawCanvas) {
         { id: 'threshold', min: 0, max: 100, step: 1 },
         { id: 'intensity', min: 0, max: 100, step: 1 },
         { id: 'opacity', min: 0, max: 100, step: 1 }
+    ]);
+
+    // Initialize UI controls for blur filter
+    filterUIManager.initFilterControls('blur', [
+        { id: 'blurRadius', min: 0, max: 100, step: 1 }
     ]);
 
     // Set the draw callback

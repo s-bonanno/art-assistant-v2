@@ -49,6 +49,7 @@ export class FilterManager {
         const hueSatFilter = this.filters.get('hueSaturation');
         const shapeFilter = this.filters.get('shape');
         const edgeFilter = this.filters.get('edge');
+        const blurFilter = this.filters.get('blur');
         
         // Create a copy of the original image data
         const originalData = new ImageData(
@@ -75,6 +76,10 @@ export class FilterManager {
         
         if (hueSatFilter?.active) {
             hueSatFilter.apply(filteredData);
+        }
+
+        if (blurFilter?.active) {
+            blurFilter.apply(filteredData);
         }
         
         // Apply edge filter last, if active
@@ -225,6 +230,12 @@ export class FilterManager {
                         return true;
                     }
                     break;
+
+                case 'blur':
+                    if (currentProps.blurRadius !== lastProps.blurRadius) {
+                        return true;
+                    }
+                    break;
             }
         }
         return false;
@@ -257,6 +268,10 @@ export class FilterManager {
                     properties.threshold = filter.properties.threshold;
                     properties.intensity = filter.properties.intensity;
                     properties.multiplyMode = filter.properties.multiplyMode;
+                    break;
+
+                case 'blur':
+                    properties.blurRadius = filter.properties.blurRadius;
                     break;
             }
             
