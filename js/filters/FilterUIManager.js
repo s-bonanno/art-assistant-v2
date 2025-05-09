@@ -1,3 +1,5 @@
+import { disableOriginalViewIfActive } from '../utils/originalImage.js';
+
 export class FilterUIManager {
     constructor(filterManager) {
         this.filterManager = filterManager;
@@ -131,16 +133,17 @@ export class FilterUIManager {
                     }
                     controls.sliders.forEach(({ element, valueDisplay }) => {
                         if (element && valueDisplay) {
-                            const resetValue = valueDisplay.dataset.resetValue || "0";
-                            element.value = resetValue;
+                            // Get the default value from the filter's properties
+                            const defaultValue = filter.properties[element.id] || 0;
+                            element.value = defaultValue;
                             
-                            // Display "All" when blockBandDepth is set to 1
-                            if (element.id === 'blockBandDepth' && resetValue === "1") {
+                            // Update the display value
+                            if (element.id === 'blockBandDepth' && defaultValue === 1) {
                                 valueDisplay.textContent = "All";
-                            } else if (element.id === 'shapeOpacity' && resetValue !== "0") {
-                                valueDisplay.textContent = `${resetValue}%`;
+                            } else if (element.id === 'shapeOpacity') {
+                                valueDisplay.textContent = `${defaultValue}%`;
                             } else {
-                                valueDisplay.textContent = resetValue;
+                                valueDisplay.textContent = defaultValue;
                             }
                         }
                     });
@@ -198,21 +201,22 @@ export class FilterUIManager {
                         }
                     }
 
-                    let value = parseInt(e.target.value);
-                    // Use updateFilterState instead of setProperty
-                    this.filterManager.updateFilterState(filterName, filter.active, {
-                        [id]: value
-                    });
+                    // Update filter property
+                    filter.setProperty(id, parseFloat(e.target.value));
                     
                     // Update display value
-                    if (id === 'blockBandDepth' && value === 1) {
+                    if (id === 'blockBandDepth' && e.target.value === '1') {
                         valueDisplay.textContent = "All";
                     } else if (id === 'shapeOpacity') {
-                        valueDisplay.textContent = `${value}%`;
+                        valueDisplay.textContent = `${e.target.value}%`;
                     } else {
-                        valueDisplay.textContent = value;
+                        valueDisplay.textContent = e.target.value;
                     }
 
+                    // Disable original view if active
+                    disableOriginalViewIfActive();
+
+                    this.filterManager.cache.needsUpdate = true;
                     if (this.onFilterChange) {
                         this.onFilterChange();
                     }
@@ -457,6 +461,9 @@ export class FilterUIManager {
                 
                 // Update UI for all filters
                 for (const [filterName, controls] of this.controls) {
+                    const filter = this.filterManager.getFilter(filterName);
+                    if (!filter) continue;
+
                     if (controls.toggle) {
                         controls.toggle.checked = false;
                     }
@@ -472,16 +479,17 @@ export class FilterUIManager {
                     // Reset all sliders to their default values
                     controls.sliders.forEach(({ element, valueDisplay }) => {
                         if (element && valueDisplay) {
-                            const resetValue = valueDisplay.dataset.resetValue || "0";
-                            element.value = resetValue;
+                            // Get the default value from the filter's properties
+                            const defaultValue = filter.properties[element.id] || 0;
+                            element.value = defaultValue;
                             
-                            // Display "All" when blockBandDepth is set to 1
-                            if (element.id === 'blockBandDepth' && resetValue === "1") {
+                            // Update the display value
+                            if (element.id === 'blockBandDepth' && defaultValue === 1) {
                                 valueDisplay.textContent = "All";
-                            } else if (element.id === 'shapeOpacity' && resetValue !== "0") {
-                                valueDisplay.textContent = `${resetValue}%`;
+                            } else if (element.id === 'shapeOpacity') {
+                                valueDisplay.textContent = `${defaultValue}%`;
                             } else {
-                                valueDisplay.textContent = resetValue;
+                                valueDisplay.textContent = defaultValue;
                             }
                         }
                     });

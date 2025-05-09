@@ -37,4 +37,24 @@ export function toggleOriginalImage() {
 // Reset to filtered view
 export function resetToFiltered() {
     _isShowingOriginal = false;
+}
+
+/**
+ * Disables the original view if it's currently active
+ * This should be called whenever grid or image controls are used
+ */
+export function disableOriginalViewIfActive() {
+    if (_isShowingOriginal) {
+        _isShowingOriginal = false;
+        const showOriginalToggle = document.getElementById('viewModeToggle');
+        if (showOriginalToggle) {
+            showOriginalToggle.checked = false;
+        }
+        // Also update the button appearance
+        const showOriginalBtn = document.querySelector('button:has(svg[data-lucide="image"])');
+        if (showOriginalBtn) {
+            showOriginalBtn.classList.remove('text-indigo-400', 'bg-zinc-800/75');
+            showOriginalBtn.classList.add('text-zinc-400');
+        }
+    }
 } 

@@ -22,7 +22,8 @@ import {
     isShowingOriginal, 
     toggleOriginalImage, 
     storeCurrentViewState, 
-    getStoredViewState 
+    getStoredViewState,
+    disableOriginalViewIfActive
 } from './js/utils/originalImage.js';
 
 const canvas = document.getElementById('canvas');
@@ -336,10 +337,12 @@ fitToScreenBtn.addEventListener('click', fitToScreen);
 gridSizeSlider.addEventListener('input', () => {
     gridSquareSizeInput.value = gridSizeSlider.value;
     updateGridSpacing();
+    disableOriginalViewIfActive();
 });
 
 gridSquareSizeInput.addEventListener('change', () => {
     updateGridSpacing();
+    disableOriginalViewIfActive();
 });
 
 // Add these at the top with other constants
@@ -1000,6 +1003,7 @@ if (gridTypeSelect) {
     gridTypeSelect.addEventListener('change', (e) => {
         gridConfig.type = e.target.value;
         updateGridControlsVisibility(gridConfig.type);
+        disableOriginalViewIfActive();
         drawCanvas();
     });
 }
@@ -1101,6 +1105,9 @@ function initializeButtons() {
                     squintBtn.classList.remove('text-indigo-400', 'bg-zinc-800/75');
                     squintBtn.classList.add('text-zinc-400');
                 }
+                
+                // Disable original view if active
+                disableOriginalViewIfActive();
                 
                 // Update the preview
                 filterManager.cache.needsUpdate = true;
