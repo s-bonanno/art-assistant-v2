@@ -228,8 +228,9 @@ export class FilterUIManager {
     _initShapeFilterTypeControls(filter) {
         const colorBlocksBtn = document.getElementById('colorBlocksFilterTypeBtn');
         const blockInBtn = document.getElementById('blockInFilterTypeBtn');
+        const invertMaskBtn = document.getElementById('invertMaskFilterTypeBtn');
         
-        if (colorBlocksBtn && blockInBtn) {
+        if (colorBlocksBtn && blockInBtn && invertMaskBtn) {
             // Set initial state based on filter.properties.filterType
             this._updateShapeFilterTypeUI(filter.properties.filterType);
             
@@ -271,21 +272,48 @@ export class FilterUIManager {
                     this.onFilterChange();
                 }
             });
+
+            invertMaskBtn.addEventListener('click', () => {
+                filter.setProperty('filterType', 'invertMask');
+                this._updateShapeFilterTypeUI('invertMask');
+                
+                // Auto-activate the filter if it's inactive
+                if (!filter.active) {
+                    filter.active = true;
+                    const controls = this.controls.get('shape');
+                    if (controls && controls.toggle) {
+                        controls.toggle.checked = true;
+                    }
+                }
+                
+                this.filterManager.cache.needsUpdate = true;
+                if (this.onFilterChange) {
+                    this.onFilterChange();
+                }
+            });
         }
     }
 
     _updateShapeFilterTypeUI(filterType) {
         const colorBlocksBtn = document.getElementById('colorBlocksFilterTypeBtn');
         const blockInBtn = document.getElementById('blockInFilterTypeBtn');
+        const invertMaskBtn = document.getElementById('invertMaskFilterTypeBtn');
         
         if (filterType === 'colorBlocks') {
             // Update buttons
             colorBlocksBtn.setAttribute('data-active', 'true');
             blockInBtn.setAttribute('data-active', 'false');
+            invertMaskBtn.setAttribute('data-active', 'false');
         } else if (filterType === 'blockIn') {
             // Update buttons
             colorBlocksBtn.setAttribute('data-active', 'false');
             blockInBtn.setAttribute('data-active', 'true');
+            invertMaskBtn.setAttribute('data-active', 'false');
+        } else if (filterType === 'invertMask') {
+            // Update buttons
+            colorBlocksBtn.setAttribute('data-active', 'false');
+            blockInBtn.setAttribute('data-active', 'false');
+            invertMaskBtn.setAttribute('data-active', 'true');
         }
     }
 

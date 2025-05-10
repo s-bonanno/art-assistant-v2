@@ -713,9 +713,10 @@
                                 <!-- Filter Type column (3/4 width) -->
                                 <div class="w-3/4">
                                     <span class="text-xs text-zinc-400 block mb-1">Mode</span>
-                                    <div class="grid grid-cols-2 bg-zinc-900/50 rounded-md p-0.5 gap-0.5">
-                                        <button type="button" id="blockInFilterTypeBtn" class="text-xs py-1.5 rounded active:scale-95 transition-all duration-75" data-filter-type="blockIn" data-active="true">Greyscale</button>
-                                        <button type="button" id="colorBlocksFilterTypeBtn" class="text-xs py-1.5 rounded active:scale-95 transition-all duration-75" data-filter-type="colorBlocks" data-active="false">Colour</button>
+                                    <div class="grid grid-cols-3 bg-zinc-900/50 rounded-md p-0.5 gap-0.5">
+                                        <button type="button" id="blockInFilterTypeBtn" class="text-xs py-1.5 rounded active:scale-95 transition-all duration-75" data-filter-type="blockIn" data-active="true">Grey</button>
+                                        <button type="button" id="colorBlocksFilterTypeBtn" class="text-xs py-1.5 rounded active:scale-95 transition-all duration-75" data-filter-type="colorBlocks" data-active="false">Mask</button>
+                                        <button type="button" id="invertMaskFilterTypeBtn" class="text-xs py-1.5 rounded active:scale-95 transition-all duration-75" data-filter-type="invertMask" data-active="false">Invert</button>
                                     </div>
                                 </div>
                                 <!-- Light Levels column (1/4 width) -->
