@@ -723,6 +723,7 @@
                                     <span class="text-xs text-zinc-400 block mb-1">Light Levels</span>
                                     <div class="relative">
                                         <select id="totalBands" class="w-full text-xs text-zinc-400 bg-zinc-850 border border-zinc-700 rounded-md pl-2 pr-6 py-1.5 appearance-none hover:text-zinc-200 hover:border-zinc-600 focus:text-zinc-200">
+                                            <option value="1">1/option>
                                             <option value="2">2</option>
                                             <option value="3">3</option>
                                             <option value="4">4</option>
@@ -751,9 +752,9 @@
                             <div class="space-y-2">
                                 <div class="flex items-center justify-between">
                                     <span class="text-xs text-zinc-400">Visible Levels</span>
-                                    <span class="text-xs text-zinc-400 cursor-pointer hover:text-zinc-200 transition-colors duration-200" id="blockBandDepthValue" data-reset-value="1"></span>
+                                    <span class="text-xs text-zinc-400 transition-colors duration-200" id="blockBandDepthValue" data-reset-value="0"></span>
                                 </div>
-                                <input type="range" id="blockBandDepth" min="1" max="6" step="1" value="1" class="w-full">
+                                <input type="range" id="blockBandDepth" min="0" max="6" step="1" value="0" class="w-full">
                             </div>
                         </div>
 

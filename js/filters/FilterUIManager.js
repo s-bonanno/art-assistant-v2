@@ -177,9 +177,9 @@ export class FilterUIManager {
                 // Set initial values
                 slider.value = filter.getProperty(id);
                 
-                // Special display for blockBandDepth value 1
-                if (id === 'blockBandDepth' && filter.getProperty(id) === 1) {
-                    valueDisplay.textContent = "All";
+                // Special display for blockBandDepth value 0
+                if (id === 'blockBandDepth' && filter.getProperty(id) === 0) {
+                    valueDisplay.textContent = "Off";
                 } else if (id === 'shapeOpacity') {
                     valueDisplay.textContent = `${filter.getProperty(id)}%`;
                 } else {
@@ -205,8 +205,8 @@ export class FilterUIManager {
                     filter.setProperty(id, parseFloat(e.target.value));
                     
                     // Update display value
-                    if (id === 'blockBandDepth' && e.target.value === '1') {
-                        valueDisplay.textContent = "All";
+                    if (id === 'blockBandDepth' && e.target.value === '0') {
+                        valueDisplay.textContent = "Off";
                     } else if (id === 'shapeOpacity') {
                         valueDisplay.textContent = `${e.target.value}%`;
                     } else {
@@ -310,7 +310,7 @@ export class FilterUIManager {
         const newSlider = document.createElement('input');
         newSlider.type = 'range';
         newSlider.id = 'blockBandDepth';
-        newSlider.min = '1';
+        newSlider.min = '0';
         newSlider.max = maxValue.toString();
         newSlider.step = '1';
         newSlider.value = currentValue.toString();
@@ -321,8 +321,8 @@ export class FilterUIManager {
             let value = parseInt(e.target.value);
             filter.setProperty('blockBandDepth', value);
             
-            if (value === 1) {
-                oldValueDisplay.textContent = "All";
+            if (value === 0) {
+                oldValueDisplay.textContent = "Off";
             } else {
                 oldValueDisplay.textContent = value;
             }
@@ -334,8 +334,8 @@ export class FilterUIManager {
         });
         
         // Update display value
-        if (currentValue === 1) {
-            oldValueDisplay.textContent = "All";
+        if (currentValue === 0) {
+            oldValueDisplay.textContent = "Off";
         } else {
             oldValueDisplay.textContent = currentValue;
         }
