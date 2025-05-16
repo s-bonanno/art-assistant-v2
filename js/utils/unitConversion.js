@@ -1,4 +1,4 @@
-const CM_PER_INCH = 2.54;
+export const CM_PER_INCH = 2.54;
 
 export function convertToUnit(valueCm, targetUnit) {
     return targetUnit === 'in' ? valueCm / CM_PER_INCH : valueCm;

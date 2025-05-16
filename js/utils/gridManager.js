@@ -1,4 +1,5 @@
 import { calculateGridSizeLimits } from './gridLimits.js';
+import { CM_PER_INCH } from './unitConversion.js';
 
 // Grid management functionality
 export function updateGridSizeDisplay(unitSelect, config, gridSizeDisplay) {
@@ -258,7 +259,7 @@ export function updateGridSizeLimits(config, gridSizeSlider, gridSquareSizeInput
             }
         }
     } else {
-        // Canvas mode - use centimeters
+        // Canvas mode - use cm/in
         if (config.pixelsPerCm) {
             const widthPx = config.canvasWidth;
             const heightPx = config.canvasHeight;
@@ -266,22 +267,31 @@ export function updateGridSizeLimits(config, gridSizeSlider, gridSquareSizeInput
             const smallerDimension = Math.min(widthPx, heightPx);
             const largerDimension = Math.max(widthPx, heightPx);
             
-            // Set minimum grid size to 1/50th of the smaller dimension in cm
-            const minSize = Math.max(0.1, (smallerDimension / 50) / config.pixelsPerCm);
+            // Get current unit from the slider's parent form
+            const unitSelect = document.getElementById('unitSelect');
+            const unit = unitSelect ? unitSelect.value : 'cm';
             
-            // Set maximum grid size to 1/3 of the larger dimension in cm
-            const maxSize = (largerDimension / 3) / config.pixelsPerCm;
+            // Set minimum grid size to 1/50th of the smaller dimension
+            let minSize = Math.max(0.1, (smallerDimension / 50) / config.pixelsPerCm);
+            // Set maximum grid size to 1/3 of the larger dimension
+            let maxSize = (largerDimension / 3) / config.pixelsPerCm;
+            
+            // Convert to inches if needed
+            if (unit === 'in') {
+                minSize = minSize / CM_PER_INCH;
+                maxSize = maxSize / CM_PER_INCH;
+            }
             
             if (gridSizeSlider) {
                 gridSizeSlider.min = minSize;
                 gridSizeSlider.max = maxSize;
-                gridSizeSlider.step = 0.1;
+                gridSizeSlider.step = unit === 'in' ? 0.25 : 0.1;
             }
             
             if (gridSquareSizeInput) {
                 gridSquareSizeInput.min = minSize;
                 gridSquareSizeInput.max = maxSize;
-                gridSquareSizeInput.step = 0.1;
+                gridSquareSizeInput.step = unit === 'in' ? 0.25 : 0.1;
             }
         }
     }

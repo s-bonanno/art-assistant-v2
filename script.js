@@ -1,4 +1,4 @@
-import { convertToUnit, convertFromUnit } from './js/utils/unitConversion.js';
+import { convertToUnit, convertFromUnit, CM_PER_INCH } from './js/utils/unitConversion.js';
 import { gridConfig, updateColorSwatchSelection, setDefaultGridStyle, initGridStyleListeners, getCurrentGridType, updateGridPreview } from './js/utils/gridStyle.js';
 import { getZoom, setZoom, getPanX, setPanX, getPanY, setPanY, resetZoomAndPan, zoomTo100, initZoomPanListeners } from './js/utils/zoomPan.js';
 import { calculateGridSizeLimits } from './js/utils/gridLimits.js';
@@ -52,7 +52,6 @@ const gridSquareSizeInput = document.getElementById('gridSquareSize');
 
 const MAX_CANVAS_DIMENSION = 1000; // Maximum canvas dimension in pixels
 const EXPORT_SIZE = 2400; // Size of the exported image
-const CM_PER_INCH = 2.54; // Conversion factor for inches to centimeters
 
 let currentImage = null;
 let isDragging = false;
@@ -460,7 +459,15 @@ unitSelect.addEventListener('change', () => {
             gridSizeSlider.step = "0.1";
         }
         
+        // Calculate pixels per cm for grid spacing
+        const pixelsPerCm = config.canvasWidth / config.canvasWidthCm;
+        config.gridSpacing = currentSizeCm * pixelsPerCm;
+        
+        // Update grid size limits for the new unit
+        updateGridSizeLimits(config, gridSizeSlider, gridSquareSizeInput, currentImage);
+        
         updateGridSpacing();
+        drawCanvas(); // Ensure the grid is redrawn with the new spacing
     }
 });
 
