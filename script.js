@@ -76,15 +76,17 @@ let config = {
 // Initialize canvas size preset selector
 if (canvasWidthInput && canvasHeightInput) {
     initCanvasPresetSelector(canvasWidthInput, canvasHeightInput, (size) => {
-        // Update the config and redraw
+        // Update the config with the centimeter values
         config.canvasWidthCm = size.width;
         config.canvasHeightCm = size.height;
+        
+        // Update the canvas
         updateCanvasSize();
         drawCanvas();
         
         // Update orientation
         orientationManager.updateOrientation();
-    });
+    }, config);
 }
 
 // Add event listeners for width/height inputs to reset to custom
@@ -434,8 +436,31 @@ canvasHeightInput.addEventListener('change', () => {
     orientationManager.updateOrientation();
 });
 
+// Helper function to format number with conditional decimals
+function formatNumber(num, unit) {
+    const decimals = unit === 'in' ? 2 : 1;
+    const formatted = num.toFixed(decimals);
+    // Remove trailing zeros and decimal point if no decimals
+    return formatted.replace(/\.?0+$/, '');
+}
+
 canvasUnitSelect.addEventListener('change', () => {
-    updateCanvasUnitDisplay();
+    const unit = canvasUnitSelect.value;
+    
+    // Convert the current dimensions to the new unit
+    const width = convertToUnit(config.canvasWidthCm, unit);
+    const height = convertToUnit(config.canvasHeightCm, unit);
+    
+    // Update the input values with conditional decimal places
+    canvasWidthInput.value = formatNumber(width, unit);
+    canvasHeightInput.value = formatNumber(height, unit);
+    
+    // Update step size
+    canvasWidthInput.step = unit === 'in' ? '0.25' : '0.1';
+    canvasHeightInput.step = unit === 'in' ? '0.25' : '0.1';
+    
+    // Update the canvas
+    updateCanvasSize();
     orientationManager.updateOrientation();
 });
 
