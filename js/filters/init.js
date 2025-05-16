@@ -27,8 +27,8 @@ export function initFilters(drawCanvas) {
     filterManager.registerFilter(shapeFilter);
 
     // Create and register edge filter
-    const edgeFilter = new EdgeFilter();
-    filterManager.registerFilter(edgeFilter);
+    // const edgeFilter = new EdgeFilter();
+    // filterManager.registerFilter(edgeFilter);
 
     // Create and register blur filter
     const blurFilter = new BlurFilter();
@@ -57,15 +57,18 @@ export function initFilters(drawCanvas) {
     filterUIManager.initFilterControls('shape', shapeSliderConfigs);
 
     // Initialize UI controls for edge filter
-    filterUIManager.initFilterControls('edge', [
-        { id: 'threshold', min: 0, max: 100, step: 1 },
-        { id: 'intensity', min: 0, max: 100, step: 1 },
-        { id: 'opacity', min: 0, max: 100, step: 1 }
-    ]);
+    // filterUIManager.initFilterControls('edge', [
+    //     { type: 'toggle', id: 'edgeFilterToggle' },
+    //     { type: 'range', id: 'edgeFilterThreshold', min: 0, max: 100, value: 50 },
+    //     { type: 'range', id: 'edgeFilterIntensity', min: 0, max: 100, value: 50 },
+    //     { type: 'range', id: 'edgeFilterOpacity', min: 0, max: 100, value: 100 },
+    //     { type: 'toggle', id: 'edgeFilterMultiply' }
+    // ]);
 
     // Initialize UI controls for blur filter
     filterUIManager.initFilterControls('blur', [
-        { id: 'blurRadius', min: 0, max: 100, step: 1 }
+        { type: 'toggle', id: 'blurFilterToggle' },
+        { type: 'range', id: 'blurFilterAmount', min: 0, max: 100, value: 50 }
     ]);
 
     // Set the draw callback

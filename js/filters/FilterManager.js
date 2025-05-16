@@ -1,6 +1,14 @@
 export class FilterManager {
     constructor() {
         this.filters = new Map();
+        this.filterOrder = [
+            'light',
+            'hueSaturation',
+            'shape',
+            // 'edge',
+            'blur'
+        ];
+        this.debouncedDraw = null;
         this.cache = {
             imageData: null,
             width: 0,
@@ -9,7 +17,6 @@ export class FilterManager {
             lastFilterStates: new Map(),
             lastCanvasSize: { width: 0, height: 0 }
         };
-        this._debouncedDraw = null;
         
         // Create reusable temporary canvas and context
         this._tempCanvas = document.createElement('canvas');
@@ -142,8 +149,8 @@ export class FilterManager {
             this.invalidateCache();
             
             // Force a redraw by triggering the debounced draw
-            if (this._debouncedDraw) {
-                this._debouncedDraw();
+            if (this.debouncedDraw) {
+                this.debouncedDraw();
             }
         }
     }
@@ -309,7 +316,7 @@ export class FilterManager {
 
     // Set the debounced draw callback
     setDebouncedDraw(callback) {
-        this._debouncedDraw = this._createDebouncedDraw(callback);
+        this.debouncedDraw = this._createDebouncedDraw(callback);
     }
 
     // Create a debounced draw function
@@ -324,8 +331,100 @@ export class FilterManager {
 
     // Trigger a debounced draw
     triggerDebouncedDraw() {
-        if (this._debouncedDraw) {
-            this._debouncedDraw();
+        if (this.debouncedDraw) {
+            this.debouncedDraw();
+        }
+    }
+
+    applyFilters(imageData) {
+        const originalData = new ImageData(
+            new Uint8ClampedArray(imageData.data),
+            imageData.width,
+            imageData.height
+        );
+
+        // Get a copy of the original data for edge detection
+        // const edgeFilter = this.filters.get('edge');
+
+        // Create a temporary canvas for intermediate results
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = imageData.width;
+        tempCanvas.height = imageData.height;
+        const tempCtx = tempCanvas.getContext('2d');
+
+        // Start with the original image
+        tempCtx.putImageData(originalData, 0, 0);
+        let filteredData = tempCtx.getImageData(0, 0, imageData.width, imageData.height);
+
+        // Apply all non-edge filters first
+        for (const filterName of this.filterOrder) {
+            const filter = this.filters.get(filterName);
+            if (filter?.active) {
+                filteredData = filter.apply(filteredData);
+                tempCtx.putImageData(filteredData, 0, 0);
+            }
+        }
+
+        // Apply edge filter last, if active
+        // if (edgeFilter?.active) {
+        //     // Store the original image data for edge detection if not already stored
+        //     if (!edgeFilter.originalImageData) {
+        //         edgeFilter.setOriginalImage(originalData);
+        //     }
+
+        //     // Apply the edge filter to the filtered result
+        //     edgeFilter.apply(filteredData);
+        // }
+
+        return filteredData;
+    }
+
+    invalidateCache(filterName) {
+        // Always invalidate cache for shape filter changes
+        if (filterName === 'shape') {
+            this.cache.imageData = null;
+            this.cache.lastCanvasSize = { width: 0, height: 0 };
+        }
+    }
+
+    getFilterConfig(filterName) {
+        const filter = this.filters.get(filterName);
+        if (!filter) return null;
+
+        switch (filterName) {
+            case 'light':
+                return {
+                    exposure: filter.exposure,
+                    contrast: filter.contrast,
+                    highlights: filter.highlights,
+                    shadows: filter.shadows
+                };
+            case 'hueSaturation':
+                return {
+                    hue: filter.hue,
+                    saturation: filter.saturation,
+                    temperature: filter.temperature
+                };
+            case 'shape':
+                return {
+                    filterType: filter.filterType,
+                    totalBands: filter.totalBands,
+                    blockBandDepth: filter.blockBandDepth,
+                    shapeOpacity: filter.shapeOpacity
+                };
+            // case 'edge':
+            //     return {
+            //         threshold: filter.threshold,
+            //         intensity: filter.intensity,
+            //         opacity: filter.opacity,
+            //         multiply: filter.multiply
+            //     };
+            case 'blur':
+                return {
+                    radius: filter.radius
+                };
+            default:
+                return null;
         }
     }
 } 

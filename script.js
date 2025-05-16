@@ -275,11 +275,11 @@ function initializeZoomPan() {
 // Call this when loading a new image
 function onImageLoaded(img) {
     // Force edge filter to refresh on new image load
-    const edgeFilter = filterManager.getFilter('edge');
-    if (edgeFilter) {
-        edgeFilter.edgeData = null;
-        edgeFilter.originalImageData = null;
-    }
+    // const edgeFilter = filterManager.getFilter('edge');
+    // if (edgeFilter) {
+    //     edgeFilter.edgeData = null;
+    //     edgeFilter.originalImageData = null;
+    // }
 
     currentImage = img;
     setOriginalImage(img); // Store the original image
@@ -641,18 +641,18 @@ exportBtn.addEventListener('click', () => {
         // Apply filters if any are active
         if (filterManager.areFiltersActive()) {
             // Get the edge filter if it's active
-            const edgeFilter = filterManager.getFilter('edge');
-            if (edgeFilter?.active) {
-                // Always regenerate edge data for export size
-                const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-                edgeFilter.setOriginalImage(imageData);
-            }
+            // const edgeFilter = filterManager.getFilter('edge');
+            // if (edgeFilter?.active) {
+            //     // Always regenerate edge data for export size
+            //     const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+            //     edgeFilter.setOriginalImage(imageData);
+            // }
             filterManager.applyFilters(tempCtx, tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
-            // Optionally, reset edge filter cache after export to avoid preview/export mismatch
-            if (edgeFilter?.active) {
-                edgeFilter.edgeData = null;
-                edgeFilter.originalImageData = null;
-            }
+            // // Optionally, reset edge filter cache after export to avoid preview/export mismatch
+            // if (edgeFilter?.active) {
+            //     edgeFilter.edgeData = null;
+            //     edgeFilter.originalImageData = null;
+            // }
         }
 
         // Draw the filtered image to export canvas
@@ -736,18 +736,18 @@ exportBtn.addEventListener('click', () => {
         // Apply filters if any are active
         if (filterManager.areFiltersActive()) {
             // Get the edge filter if it's active
-            const edgeFilter = filterManager.getFilter('edge');
-            if (edgeFilter?.active) {
-                // Always regenerate edge data for export size
-                const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-                edgeFilter.setOriginalImage(imageData);
-            }
+            // const edgeFilter = filterManager.getFilter('edge');
+            // if (edgeFilter?.active) {
+            //     // Always regenerate edge data for export size
+            //     const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+            //     edgeFilter.setOriginalImage(imageData);
+            // }
             filterManager.applyFilters(tempCtx, tempCanvas, 0, 0, scaledWidth, scaledHeight);
-            // Optionally, reset edge filter cache after export to avoid preview/export mismatch
-            if (edgeFilter?.active) {
-                edgeFilter.edgeData = null;
-                edgeFilter.originalImageData = null;
-            }
+            // // Optionally, reset edge filter cache after export to avoid preview/export mismatch
+            // if (edgeFilter?.active) {
+            //     edgeFilter.edgeData = null;
+            //     edgeFilter.originalImageData = null;
+            // }
         }
 
         // Draw the filtered image to export canvas
@@ -925,11 +925,11 @@ function updateViewMode(showAll) {
     config.viewMode = showAll ? 'full' : 'canvas';
     
     // Force edge filter to refresh when switching modes
-    const edgeFilter = filterManager.getFilter('edge');
-    if (edgeFilter) {
-        edgeFilter.edgeData = null;
-        edgeFilter.originalImageData = null;
-    }
+    // const edgeFilter = filterManager.getFilter('edge');
+    // if (edgeFilter) {
+    //     edgeFilter.edgeData = null;
+    //     edgeFilter.originalImageData = null;
+    // }
     
     // Invalidate filter cache when switching modes
     filterManager.invalidateCache();
