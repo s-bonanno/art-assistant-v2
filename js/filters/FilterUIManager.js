@@ -182,6 +182,8 @@ export class FilterUIManager {
                     valueDisplay.textContent = "Off";
                 } else if (id === 'shapeOpacity') {
                     valueDisplay.textContent = `${filter.getProperty(id)}%`;
+                } else if (id === 'blurRadius') {
+                    valueDisplay.textContent = filter.getProperty(id);
                 } else {
                     valueDisplay.textContent = filter.getProperty(id);
                 }
@@ -192,8 +194,10 @@ export class FilterUIManager {
                 slider.step = step;
 
                 slider.addEventListener('input', (e) => {
-                    // Auto-activate the filter if it's inactive
-                    if (!filter.active) {
+                    const value = parseFloat(e.target.value);
+                    
+                    // Auto-activate the filter if it's inactive and the value is non-zero
+                    if (!filter.active && value > 0) {
                         filter.active = true;
                         const controls = this.controls.get(filterName);
                         if (controls && controls.toggle) {
@@ -202,15 +206,17 @@ export class FilterUIManager {
                     }
 
                     // Update filter property
-                    filter.setProperty(id, parseFloat(e.target.value));
+                    filter.setProperty(id, value);
                     
                     // Update display value
-                    if (id === 'blockBandDepth' && e.target.value === '0') {
+                    if (id === 'blockBandDepth' && value === 0) {
                         valueDisplay.textContent = "Off";
                     } else if (id === 'shapeOpacity') {
-                        valueDisplay.textContent = `${e.target.value}%`;
+                        valueDisplay.textContent = `${value}%`;
+                    } else if (id === 'blurRadius') {
+                        valueDisplay.textContent = Math.round(value);
                     } else {
-                        valueDisplay.textContent = e.target.value;
+                        valueDisplay.textContent = value;
                     }
 
                     // Disable original view if active

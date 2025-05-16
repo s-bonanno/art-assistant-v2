@@ -67,8 +67,7 @@ export function initFilters(drawCanvas) {
 
     // Initialize UI controls for blur filter
     filterUIManager.initFilterControls('blur', [
-        { type: 'toggle', id: 'blurFilterToggle' },
-        { type: 'range', id: 'blurFilterAmount', min: 0, max: 100, value: 50 }
+        { id: 'blurRadius', min: 0, max: 100, step: 1 }
     ]);
 
     // Set the draw callback

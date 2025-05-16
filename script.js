@@ -1123,6 +1123,15 @@ function initializeButtons() {
                 // Toggle the blur filter
                 blurFilter.active = !blurFilter.active;
                 
+                // If activating, ensure there's a non-zero blur radius
+                if (blurFilter.active && blurFilter.properties.blurRadius <= 0) {
+                    blurFilter.properties.blurRadius = 50;
+                    const blurSlider = document.getElementById('blurRadius');
+                    if (blurSlider) {
+                        blurSlider.value = 50;
+                    }
+                }
+                
                 // Update the UI
                 const blurToggle = document.getElementById('blurFilterToggle');
                 if (blurToggle) {

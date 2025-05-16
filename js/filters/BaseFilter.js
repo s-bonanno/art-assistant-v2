@@ -18,9 +18,8 @@ export class BaseFilter {
 
     // Method to reset all properties to their default values
     reset() {
-        Object.keys(this.properties).forEach(key => {
-            this.properties[key] = 0;
-        });
+        this.active = false;
+        // Don't reset properties to 0, let each filter handle its own reset
     }
 
     // Method to update a property value
@@ -37,6 +36,6 @@ export class BaseFilter {
 
     // Method to check if the filter has changed
     hasChanged() {
-        return this.active || Object.values(this.properties).some(value => value !== 0);
+        return this.active && Object.values(this.properties).some(value => value !== 0);
     }
 } 

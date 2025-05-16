@@ -4,7 +4,7 @@ export class BlurFilter extends BaseFilter {
     constructor() {
         super('blur');
         this.properties = {
-            blurRadius: 50  // Blur radius (0-100)
+            blurRadius: 0  // Start with 0 blur radius
         };
     }
 
@@ -41,8 +41,8 @@ export class BlurFilter extends BaseFilter {
     }
 
     reset() {
-        this.active = false;
-        this.properties.blurRadius = 50;
+        super.reset();  // Call parent reset to set active to false
+        this.properties.blurRadius = 0;  // Reset to 0
     }
 
     // Override hasChanged to properly detect changes

@@ -212,8 +212,8 @@ function applyInvertMaskFilter(imageData, bandDepth = 1, totalBands = 6) {
     const effectiveBandDepth = bandDepth;
     
     // Determine which bands to show based on current depth
-    // Show from dark to light (lowest bands first)
-    const maxBand = Math.min(totalBands - 1, effectiveBandDepth - 1);
+    // Show from light to dark (highest bands first)
+    const minBand = Math.max(0, totalBands - effectiveBandDepth);
     
     // First pass: Determine the tonal band for each pixel
     for (let y = 0; y < height; y++) {
@@ -234,15 +234,15 @@ function applyInvertMaskFilter(imageData, bandDepth = 1, totalBands = 6) {
             const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
             const band = Math.floor(luminance / bandSize);
             
-            if (band <= maxBand) {
-                // Show black for visible bands (inverted from regular mask)
-                output[i] = output[i + 1] = output[i + 2] = 0;
-                output[i + 3] = alpha;
-            } else {
-                // Show original colors for hidden bands (inverted from regular mask)
+            if (band >= minBand) {
+                // Show original colors for visible bands (lightest tones first)
                 output[i] = r;
                 output[i + 1] = g;
                 output[i + 2] = b;
+                output[i + 3] = alpha;
+            } else {
+                // Hide colors for masked bands with 20% grey
+                output[i] = output[i + 1] = output[i + 2] = 51; // 20% grey
                 output[i + 3] = alpha;
             }
         }

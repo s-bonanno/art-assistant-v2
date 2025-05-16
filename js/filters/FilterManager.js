@@ -55,7 +55,6 @@ export class FilterManager {
         const lightFilter = this.filters.get('light');
         const hueSatFilter = this.filters.get('hueSaturation');
         const shapeFilter = this.filters.get('shape');
-        const edgeFilter = this.filters.get('edge');
         const blurFilter = this.filters.get('blur');
         
         // Create a copy of the original image data
@@ -72,32 +71,12 @@ export class FilterManager {
             imageData.height
         );
         
-        // Apply all non-edge filters first
-        if (shapeFilter?.active) {
-            shapeFilter.apply(filteredData);
-        }
-        
-        if (lightFilter?.active) {
-            lightFilter.apply(filteredData);
-        }
-        
-        if (hueSatFilter?.active) {
-            hueSatFilter.apply(filteredData);
-        }
-
-        if (blurFilter?.active) {
-            blurFilter.apply(filteredData);
-        }
-        
-        // Apply edge filter last, if active
-        if (edgeFilter?.active) {
-            // Store the original image data for edge detection if not already stored
-            if (!edgeFilter.originalImageData) {
-                edgeFilter.setOriginalImage(originalData);
+        // Apply filters in the specified order
+        for (const filterName of this.filterOrder) {
+            const filter = this.filters.get(filterName);
+            if (filter?.active) {
+                filter.apply(filteredData);
             }
-            
-            // Apply the edge filter to the filtered result
-            edgeFilter.apply(filteredData);
         }
         
         // Copy the final result back to the input imageData
@@ -157,6 +136,12 @@ export class FilterManager {
 
     // Apply all active filters to the image data
     applyFilters(ctx, canvas, x, y, width, height) {
+        // Validate dimensions
+        if (!width || !height || width <= 0 || height <= 0) {
+            console.warn('Invalid dimensions for filter application:', { width, height });
+            return;
+        }
+
         // Check if we need to update the cache
         const filtersChanged = this._haveFiltersChanged();
         const sizeChanged = this.cache.width !== width || this.cache.height !== height;
@@ -334,49 +319,6 @@ export class FilterManager {
         if (this.debouncedDraw) {
             this.debouncedDraw();
         }
-    }
-
-    applyFilters(imageData) {
-        const originalData = new ImageData(
-            new Uint8ClampedArray(imageData.data),
-            imageData.width,
-            imageData.height
-        );
-
-        // Get a copy of the original data for edge detection
-        // const edgeFilter = this.filters.get('edge');
-
-        // Create a temporary canvas for intermediate results
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = imageData.width;
-        tempCanvas.height = imageData.height;
-        const tempCtx = tempCanvas.getContext('2d');
-
-        // Start with the original image
-        tempCtx.putImageData(originalData, 0, 0);
-        let filteredData = tempCtx.getImageData(0, 0, imageData.width, imageData.height);
-
-        // Apply all non-edge filters first
-        for (const filterName of this.filterOrder) {
-            const filter = this.filters.get(filterName);
-            if (filter?.active) {
-                filteredData = filter.apply(filteredData);
-                tempCtx.putImageData(filteredData, 0, 0);
-            }
-        }
-
-        // Apply edge filter last, if active
-        // if (edgeFilter?.active) {
-        //     // Store the original image data for edge detection if not already stored
-        //     if (!edgeFilter.originalImageData) {
-        //         edgeFilter.setOriginalImage(originalData);
-        //     }
-
-        //     // Apply the edge filter to the filtered result
-        //     edgeFilter.apply(filteredData);
-        // }
-
-        return filteredData;
     }
 
     invalidateCache(filterName) {
