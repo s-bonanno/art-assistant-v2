@@ -285,13 +285,13 @@ export function updateGridSizeLimits(config, gridSizeSlider, gridSquareSizeInput
             if (gridSizeSlider) {
                 gridSizeSlider.min = minSize;
                 gridSizeSlider.max = maxSize;
-                gridSizeSlider.step = unit === 'in' ? 0.25 : 0.1;
+                gridSizeSlider.step = unit === 'in' ? 0.01 : 0.1;
             }
             
             if (gridSquareSizeInput) {
                 gridSquareSizeInput.min = minSize;
                 gridSquareSizeInput.max = maxSize;
-                gridSquareSizeInput.step = unit === 'in' ? 0.25 : 0.1;
+                gridSquareSizeInput.step = unit === 'in' ? 0.01 : 0.1;
             }
         }
     }
